@@ -1,13 +1,39 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
+import re
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_serializer, field_validator
+
+
+_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_COMPACT_DATE_PATTERN = re.compile(r"^\d{8}$")
 
 
 class ToolRequest(BaseModel):
     symbol: str = Field(..., min_length=1, description="Market symbol identifier")
     limit: int = Field(..., ge=1, description="Number of recent data points to return")
+    offset: int = Field(0, ge=0, description="Number of most recent points to skip")
+    start_date: str | None = Field(
+        None,
+        description="Start date (YYYY-MM-DD or YYYYMMDD)",
+    )
+    end_date: str | None = Field(
+        None,
+        description="End date (YYYY-MM-DD or YYYYMMDD)",
+    )
+
+    @field_validator("start_date", "end_date")
+    @classmethod
+    def _validate_date(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if _DATE_PATTERN.match(cleaned) or _COMPACT_DATE_PATTERN.match(cleaned):
+            return cleaned
+        raise ValueError("Date must be in YYYY-MM-DD or YYYYMMDD format")
 
 
 class KlineRequest(ToolRequest):
@@ -38,7 +64,7 @@ class MacdRequest(ToolRequest):
 
     @field_validator("slow_period")
     @classmethod
-    def _validate_slow_period(cls, value: int, info) -> int:
+    def _validate_slow_period(cls, value: int, info: ValidationInfo) -> int:
         fast = info.data.get("fast_period")
         if fast is not None and value <= fast:
             raise ValueError("slow_period must be greater than fast_period")
@@ -53,15 +79,33 @@ class KlineBar(BaseModel):
     close: float
     volume: float | None = None
 
+    @field_serializer("timestamp", when_used="json")
+    def _serialize_timestamp(self, value: datetime) -> str:
+        if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+            return value.replace(tzinfo=timezone.utc).isoformat()
+        return value.isoformat()
+
 
 class RsiPoint(BaseModel):
     timestamp: datetime
     rsi: float | None = None
 
+    @field_serializer("timestamp", when_used="json")
+    def _serialize_timestamp(self, value: datetime) -> str:
+        if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+            return value.replace(tzinfo=timezone.utc).isoformat()
+        return value.isoformat()
+
 
 class MaPoint(BaseModel):
     timestamp: datetime
     ma: float | None = None
+
+    @field_serializer("timestamp", when_used="json")
+    def _serialize_timestamp(self, value: datetime) -> str:
+        if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+            return value.replace(tzinfo=timezone.utc).isoformat()
+        return value.isoformat()
 
 
 class MacdPoint(BaseModel):
@@ -69,3 +113,39 @@ class MacdPoint(BaseModel):
     macd: float | None = None
     signal: float | None = None
     histogram: float | None = None
+
+    @field_serializer("timestamp", when_used="json")
+    def _serialize_timestamp(self, value: datetime) -> str:
+        if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+            return value.replace(tzinfo=timezone.utc).isoformat()
+        return value.isoformat()
+
+
+class ToolResponse(BaseModel):
+    symbol: str = Field(..., min_length=1, description="Market symbol identifier")
+    count: int = Field(..., ge=0, description="Number of items in this response")
+    total: int = Field(..., ge=0, description="Total items available before pagination")
+    limit: int = Field(..., ge=1, description="Requested page size")
+    offset: int = Field(..., ge=0, description="Number of most recent points skipped")
+    has_more: bool = Field(..., description="Whether older data is available")
+    next_offset: int | None = Field(None, ge=0, description="Offset for the next page")
+    start_date: str | None = Field(None, description="Applied start date filter")
+    end_date: str | None = Field(None, description="Applied end date filter")
+
+    model_config = {"extra": "ignore"}
+
+
+class KlineResponse(ToolResponse):
+    items: list[KlineBar] = Field(default_factory=list)
+
+
+class RsiResponse(ToolResponse):
+    items: list[RsiPoint] = Field(default_factory=list)
+
+
+class MaResponse(ToolResponse):
+    items: list[MaPoint] = Field(default_factory=list)
+
+
+class MacdResponse(ToolResponse):
+    items: list[MacdPoint] = Field(default_factory=list)
