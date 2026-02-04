@@ -40,26 +40,48 @@ class FakeEngine:
 
 def test_kline_limits_bars() -> None:
     service = MarketService(FakeClient(), FakeEngine())
-    bars = service.kline(KlineRequest(symbol="000001", limit=2))
-    assert len(bars) == 2
-    assert bars[0].timestamp == datetime(2024, 1, 2)
-    assert bars[0].open == 11.0
+    response = service.kline(KlineRequest(symbol="000001", limit=2))
+    assert response.count == 2
+    assert response.total == 3
+    assert response.has_more is True
+    assert response.next_offset == 2
+    assert len(response.items) == 2
+    assert response.items[0].timestamp == datetime(2024, 1, 2)
+    assert response.items[0].open == 11.0
 
 
 def test_rsi_points_limit() -> None:
     service = MarketService(FakeClient(), FakeEngine())
-    points = service.rsi(RsiRequest(symbol="000001", limit=2))
-    assert len(points) == 2
-    assert points[-1].timestamp == datetime(2024, 1, 3)
+    response = service.rsi(RsiRequest(symbol="000001", limit=2))
+    assert response.count == 2
+    assert response.total == 3
+    assert len(response.items) == 2
+    assert response.items[-1].timestamp == datetime(2024, 1, 3)
 
 
 def test_ma_points_limit() -> None:
     service = MarketService(FakeClient(), FakeEngine())
-    points = service.ma(MaRequest(symbol="000001", limit=1))
-    assert len(points) == 1
+    response = service.ma(MaRequest(symbol="000001", limit=1))
+    assert response.count == 1
+    assert response.total == 3
+    assert response.has_more is True
+    assert response.next_offset == 1
+    assert len(response.items) == 1
 
 
 def test_macd_points_limit() -> None:
     service = MarketService(FakeClient(), FakeEngine())
-    points = service.macd(MacdRequest(symbol="000001", limit=1))
-    assert len(points) == 1
+    response = service.macd(MacdRequest(symbol="000001", limit=1))
+    assert response.count == 1
+    assert response.total == 3
+    assert len(response.items) == 1
+
+
+def test_pagination_offset_beyond_total() -> None:
+    service = MarketService(FakeClient(), FakeEngine())
+    response = service.kline(KlineRequest(symbol="000001", limit=2, offset=5))
+    assert response.count == 0
+    assert response.total == 3
+    assert response.has_more is False
+    assert response.next_offset is None
+    assert response.items == []

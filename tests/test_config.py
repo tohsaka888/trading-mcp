@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from trading_mcp.config import Settings
+from config import Settings
 
 
 def test_settings_validation_error_includes_field():
