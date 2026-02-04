@@ -1,0 +1,36 @@
+ {
+  "$schema": "https://opencode.ai/config.json",
+  "model": "github-copilot/gpt-5.2-codex",
+  "server": {
+    "hostname": "0.0.0.0",
+    "mdns": true,
+    "cors": ["*"]
+  },
+  "tools": {
+    "write": true,
+    "bash": true
+  },
+  "editor": {
+    "formatOnSave": true
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": "allow",
+    "webfetch": "allow",
+    "lsp": "allow"
+  },
+  "lsp": {
+    "python": {
+      "servers": [
+        {
+          "name": "ruff",
+          "command": ["ruff", "server"]
+        },
+        {
+          "name": "ty",
+          "command": ["ty", "server"]
+        }
+      ]
+    }
+  }
+}
