@@ -81,10 +81,10 @@ python main.py
 ```
 
 可用工具：
-- `trading_kline(symbol, limit, offset=0, start_date=None, end_date=None, response_format="markdown")`
-- `trading_macd(symbol, limit, fast_period=12, slow_period=26, signal_period=9, offset=0, start_date=None, end_date=None, response_format="markdown")`
-- `trading_rsi(symbol, limit, period=14, offset=0, start_date=None, end_date=None, response_format="markdown")`
-- `trading_ma(symbol, limit, period=20, ma_type="sma", offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_kline(symbol, limit, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_macd(symbol, limit, fast_period=12, slow_period=26, signal_period=9, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_rsi(symbol, limit, period=14, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_ma(symbol, limit, period=20, ma_type="sma", offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 
 符号说明：
 - A 股示例：`000001`、`300308.SZ`
@@ -102,6 +102,7 @@ python main.py
   "offset": 0,
   "has_more": false,
   "next_offset": null,
+  "period_type": "1d",
   "start_date": "2024-01-01",
   "end_date": "2024-02-01"
 }

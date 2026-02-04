@@ -17,7 +17,11 @@ class MarketDataClient(Protocol):
     """Interface for market data clients."""
 
     def fetch(
-        self, symbol: str, start: DateLike | None = None, end: DateLike | None = None
+        self,
+        symbol: str,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        period_type: str = "1d",
     ) -> pd.DataFrame:
         """Return time-ordered data for a symbol and date range."""
 

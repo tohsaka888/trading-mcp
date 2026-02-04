@@ -39,11 +39,13 @@ def test_format_kline_response_contains_table() -> None:
         offset=0,
         has_more=False,
         next_offset=None,
+        period_type="1d",
         start_date="2024-01-01",
         end_date="2024-01-01",
     )
     text = format_kline_response(response)
     assert "# trading_kline" in text
+    assert "Period: `1d`" in text
     assert "| timestamp | open | high | low | close | volume |" in text
 
 
@@ -57,11 +59,13 @@ def test_format_rsi_response_contains_table() -> None:
         offset=0,
         has_more=False,
         next_offset=None,
+        period_type="1d",
         start_date=None,
         end_date=None,
     )
     text = format_rsi_response(response)
     assert "# trading_rsi" in text
+    assert "Period: `1d`" in text
     assert "| timestamp | rsi |" in text
 
 
@@ -75,11 +79,13 @@ def test_format_ma_response_contains_table() -> None:
         offset=0,
         has_more=False,
         next_offset=None,
+        period_type="1d",
         start_date=None,
         end_date=None,
     )
     text = format_ma_response(response)
     assert "# trading_ma" in text
+    assert "Period: `1d`" in text
     assert "| timestamp | ma |" in text
 
 
@@ -100,9 +106,11 @@ def test_format_macd_response_contains_table() -> None:
         offset=0,
         has_more=False,
         next_offset=None,
+        period_type="1d",
         start_date=None,
         end_date=None,
     )
     text = format_macd_response(response)
     assert "# trading_macd" in text
+    assert "Period: `1d`" in text
     assert "| timestamp | macd | signal | histogram |" in text

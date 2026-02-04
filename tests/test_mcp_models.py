@@ -14,6 +14,7 @@ def test_kline_limit_validation() -> None:
 def test_rsi_defaults() -> None:
     request = RsiRequest(symbol="000001", limit=5)
     assert request.period == 14
+    assert request.period_type == "1d"
 
 
 def test_ma_type_validation() -> None:
@@ -45,6 +46,11 @@ def test_date_validation_allows_supported_formats() -> None:
 def test_date_validation_rejects_invalid() -> None:
     with pytest.raises(ValidationError):
         KlineRequest(symbol="000001", limit=5, start_date="01-01-2024")
+
+
+def test_period_type_validation() -> None:
+    with pytest.raises(ValidationError):
+        KlineRequest(symbol="000001", limit=5, period_type="weekly")
 
 
 def test_timestamp_json_includes_timezone() -> None:

@@ -26,6 +26,7 @@ def _fmt_indicator(value: object) -> str:
 def _format_header(tool_name: str, response: object) -> list[str]:
     lines: list[str] = [f"# {tool_name}"]
     symbol = getattr(response, "symbol", "-")
+    period_type = getattr(response, "period_type", "-")
     limit = getattr(response, "limit", "-")
     offset = getattr(response, "offset", "-")
     count = getattr(response, "count", "-")
@@ -36,6 +37,7 @@ def _format_header(tool_name: str, response: object) -> list[str]:
     end_date = getattr(response, "end_date", None) or "-"
 
     lines.append(f"Symbol: `{symbol}`")
+    lines.append(f"Period: `{period_type}`")
     lines.append(
         " | ".join(
             [
