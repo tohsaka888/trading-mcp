@@ -4,7 +4,7 @@
 
 ## 项目目标
 - 提供交易场景的基础能力：行情数据抓取与技术指标计算。
-- 以 MCP Server 形式对外提供工具：`kline`、`rsi`、`ma`、`macd`。
+- 以 MCP Server 形式对外提供工具：`trading_kline`、`trading_rsi`、`trading_ma`、`trading_macd`。
 - 关键依赖：`uv`、`pydantic`、`akshare`、`TA-Lib`、`mcp`。
 
 ## 技术架构（模块视角 + 调用链）
@@ -30,4 +30,4 @@
 - 运行 MCP Server：
   - `python main.py`
 - MCP 工具概览：
-  - `kline` / `rsi` / `ma` / `macd`（参数细节参考实现与模型定义）
+  - `trading_kline` / `trading_rsi` / `trading_ma` / `trading_macd`（支持 offset 与日期范围分页，响应带结构化元数据）
