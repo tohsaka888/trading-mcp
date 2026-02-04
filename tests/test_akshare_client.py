@@ -8,11 +8,15 @@ from data import akshare_client
 def test_fetch_falls_back_to_tencent_with_normalized_symbol(monkeypatch) -> None:
     calls: dict[str, str] = {}
 
-    def fake_hist(*, symbol: str, start_date: str, end_date: str, adjust: str):
+    def fake_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
         calls["hist"] = symbol
         return pd.DataFrame()
 
-    def fake_hist_tx(*, symbol: str, start_date: str, end_date: str, adjust: str):
+    def fake_hist_tx(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
         calls["hist_tx"] = symbol
         return pd.DataFrame(
             {
@@ -41,7 +45,9 @@ def test_fetch_us_symbol_maps_to_eastmoney_hist(monkeypatch) -> None:
     def fake_spot_em():
         return pd.DataFrame({"代码": ["105.AAPL"]})
 
-    def fake_us_hist(*, symbol: str, period: str, start_date: str, end_date: str, adjust: str):
+    def fake_us_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
         calls["hist"] = symbol
         return pd.DataFrame(
             {
@@ -75,7 +81,9 @@ def test_fetch_us_symbol_uses_direct_code(monkeypatch) -> None:
     def fake_spot_em():
         raise AssertionError("spot_em should not be called for explicit codes")
 
-    def fake_us_hist(*, symbol: str, period: str, start_date: str, end_date: str, adjust: str):
+    def fake_us_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
         calls["hist"] = symbol
         return pd.DataFrame(
             {
@@ -102,7 +110,9 @@ def test_fetch_us_symbol_falls_back_to_daily_with_date_filter(monkeypatch) -> No
     def fake_spot_em():
         return pd.DataFrame()
 
-    def fake_us_hist(*, symbol: str, period: str, start_date: str, end_date: str, adjust: str):
+    def fake_us_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
         raise AssertionError("hist should not be called when mapping is missing")
 
     def fake_us_daily(*, symbol: str, adjust: str):
@@ -139,7 +149,9 @@ def test_us_symbol_map_cache(monkeypatch) -> None:
         calls["spot"] += 1
         return pd.DataFrame({"代码": ["105.AAPL"]})
 
-    def fake_us_hist(*, symbol: str, period: str, start_date: str, end_date: str, adjust: str):
+    def fake_us_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
         return pd.DataFrame(
             {
                 "date": ["2024-01-02"],
@@ -160,3 +172,51 @@ def test_us_symbol_map_cache(monkeypatch) -> None:
     client.fetch("AAPL.US", "2024-01-01", "2024-01-10")
 
     assert calls["spot"] == 1
+
+
+def test_fetch_us_resamples_weekly_from_daily(monkeypatch) -> None:
+    def fake_spot_em():
+        return pd.DataFrame()
+
+    def fake_us_hist(*, symbol: str, period: str, start_date: str, end_date: str, adjust: str):
+        raise AssertionError("hist should not be called when mapping is missing")
+
+    def fake_us_daily(*, symbol: str, adjust: str):
+        return pd.DataFrame(
+            {
+                "date": [
+                    "2024-01-01",
+                    "2024-01-02",
+                    "2024-01-03",
+                    "2024-01-04",
+                    "2024-01-05",
+                    "2024-01-08",
+                    "2024-01-09",
+                    "2024-01-10",
+                    "2024-01-11",
+                    "2024-01-12",
+                ],
+                "open": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "high": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                "low": [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5],
+                "close": [1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1],
+                "volume": [100, 100, 100, 100, 100, 200, 200, 200, 200, 200],
+            }
+        )
+
+    monkeypatch.setattr(akshare_client.ak, "stock_us_spot_em", fake_spot_em)
+    monkeypatch.setattr(akshare_client.ak, "stock_us_hist", fake_us_hist)
+    monkeypatch.setattr(akshare_client.ak, "stock_us_daily", fake_us_daily)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch("AAPL", "2024-01-01", "2024-01-31", period_type="1w")
+
+    assert frame["date"].tolist() == [
+        pd.Timestamp("2024-01-05"),
+        pd.Timestamp("2024-01-12"),
+    ]
+    assert frame["open"].tolist() == [1, 6]
+    assert frame["high"].tolist() == [6, 11]
+    assert frame["low"].tolist() == [0.5, 5.5]
+    assert frame["close"].tolist() == [5.1, 10.1]
+    assert frame["volume"].tolist() == [500, 1000]

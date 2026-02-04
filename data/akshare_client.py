@@ -11,7 +11,12 @@ import pandas as pd
 from .client import DateLike, MarketDataError
 
 
-_DATE_COLUMNS = ("date", "日期", "交易日期", "trade_date")
+_DATE_COLUMNS = ("date", "日期", "交易日期", "trade_date", "datetime", "time")
+_OPEN_COLUMNS = ("open", "开盘")
+_HIGH_COLUMNS = ("high", "最高")
+_LOW_COLUMNS = ("low", "最低")
+_CLOSE_COLUMNS = ("close", "收盘")
+_VOLUME_COLUMNS = ("volume", "vol", "成交量")
 _US_CODE_PATTERN = re.compile(r"^\d{3}\.[A-Z0-9.-]+$")
 _US_SUFFIX = ".US"
 _US_TICKER_PATTERN = re.compile(r"^[A-Z][A-Z.-]*$")
@@ -79,6 +84,13 @@ def _normalize_symbol(symbol: str) -> tuple[str, str | None]:
 
 def _find_date_column(columns: Iterable[str]) -> str | None:
     for name in _DATE_COLUMNS:
+        if name in columns:
+            return name
+    return None
+
+
+def _find_column(columns: Iterable[str], candidates: Iterable[str]) -> str | None:
+    for name in candidates:
         if name in columns:
             return name
     return None
@@ -153,6 +165,88 @@ def _normalize_frame(frame: pd.DataFrame) -> pd.DataFrame:
     return frame.sort_index()
 
 
+_PERIOD_MAP = {"1d": "daily", "1w": "weekly", "1m": "monthly"}
+_PERIOD_RULES = {"1w": "W-FRI", "1m": "M"}
+
+
+def _period_to_ak(period_type: str) -> str:
+    mapped = _PERIOD_MAP.get(period_type)
+    if mapped is None:
+        raise MarketDataError(f"Unsupported period_type: {period_type}")
+    return mapped
+
+
+def _period_to_rule(period_type: str) -> str:
+    rule = _PERIOD_RULES.get(period_type)
+    if rule is None:
+        raise MarketDataError(f"Unsupported period_type: {period_type}")
+    return rule
+
+
+def _resample_ohlcv(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
+    if frame is None or frame.empty:
+        return frame
+
+    date_col = _find_date_column(frame.columns)
+    if date_col is None:
+        indexed = frame.copy()
+        indexed.index = pd.to_datetime(indexed.index, errors="coerce")
+    else:
+        indexed = frame.copy()
+        indexed[date_col] = pd.to_datetime(indexed[date_col], errors="coerce")
+        indexed = indexed.dropna(subset=[date_col])
+        indexed = indexed.set_index(date_col)
+
+    indexed = indexed.sort_index()
+    open_col = _find_column(indexed.columns, _OPEN_COLUMNS)
+    high_col = _find_column(indexed.columns, _HIGH_COLUMNS)
+    low_col = _find_column(indexed.columns, _LOW_COLUMNS)
+    close_col = _find_column(indexed.columns, _CLOSE_COLUMNS)
+    volume_col = _find_column(indexed.columns, _VOLUME_COLUMNS)
+
+    missing = [
+        name
+        for name, col in (
+            ("open", open_col),
+            ("high", high_col),
+            ("low", low_col),
+            ("close", close_col),
+        )
+        if col is None
+    ]
+    if missing:
+        raise MarketDataError(f"Missing required columns: {', '.join(missing)}")
+
+    agg = {
+        open_col: "first",
+        high_col: "max",
+        low_col: "min",
+        close_col: "last",
+    }
+    if volume_col is not None:
+        agg[volume_col] = "sum"
+
+    resampled = (
+        indexed.resample(rule, label="right", closed="right")
+        .agg(agg)
+        .dropna(subset=[close_col])
+    )
+
+    rename_map = {
+        open_col: "open",
+        high_col: "high",
+        low_col: "low",
+        close_col: "close",
+    }
+    if volume_col is not None:
+        rename_map[volume_col] = "volume"
+
+    resampled = resampled.rename(columns=rename_map)
+    index_name = resampled.index.name or "index"
+    resampled = resampled.reset_index().rename(columns={index_name: "date"})
+    return resampled
+
+
 class AkshareMarketDataClient:
     """Akshare-backed market data client."""
 
@@ -208,30 +302,59 @@ class AkshareMarketDataClient:
         return codes[0]
 
     def _fetch_us(
-        self, symbol: str, start: DateLike | None, end: DateLike | None
+        self,
+        symbol: str,
+        start: DateLike | None,
+        end: DateLike | None,
+        period_type: str,
     ) -> pd.DataFrame:
         start_date = _to_ak_date(start)
         end_date = _to_ak_date(end)
+        period = _period_to_ak(period_type)
         ticker, explicit_code = _normalize_us_symbol(symbol)
         code = explicit_code or self._resolve_us_code(ticker)
 
         primary_frame: pd.DataFrame | None = None
         primary_error: Exception | None = None
+        used_native_period = False
         if code:
             try:
                 primary_frame = ak.stock_us_hist(
                     symbol=code,
-                    period="daily",
+                    period=period,
                     start_date=start_date or "",
                     end_date=end_date or "",
                     adjust=self._adjust,
                 )
+                used_native_period = True
+            except TypeError:
+                if period == "daily":
+                    try:
+                        primary_frame = ak.stock_us_hist(
+                            symbol=code,
+                            start_date=start_date or "",
+                            end_date=end_date or "",
+                            adjust=self._adjust,
+                        )
+                    except Exception as exc:  # pragma: no cover - network/data issues
+                        primary_error = exc
+                    else:
+                        primary_error = None
+                else:
+                    primary_error = None
             except Exception as exc:  # pragma: no cover - network/data issues
                 primary_error = exc
             else:
                 primary_error = None
 
             if primary_frame is not None and not primary_frame.empty:
+                if period_type != "1d" and not used_native_period:
+                    filtered = _filter_frame_by_dates(primary_frame, start, end)
+                    resampled = _resample_ohlcv(
+                        filtered, _period_to_rule(period_type)
+                    )
+                    resampled = _filter_frame_by_dates(resampled, start, end)
+                    return _normalize_frame(resampled)
                 return _normalize_frame(primary_frame)
 
         fallback_frame: pd.DataFrame | None = None
@@ -242,6 +365,10 @@ class AkshareMarketDataClient:
 
         if fallback_frame is not None and not fallback_frame.empty:
             filtered = _filter_frame_by_dates(fallback_frame, start, end)
+            if period_type != "1d":
+                resampled = _resample_ohlcv(filtered, _period_to_rule(period_type))
+                resampled = _filter_frame_by_dates(resampled, start, end)
+                return _normalize_frame(resampled)
             return _normalize_frame(filtered)
 
         if primary_frame is not None:
@@ -256,47 +383,97 @@ class AkshareMarketDataClient:
         return pd.DataFrame()
 
     def fetch(
-        self, symbol: str, start: DateLike | None = None, end: DateLike | None = None
+        self,
+        symbol: str,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        period_type: str = "1d",
     ) -> pd.DataFrame:
         cleaned = symbol.strip()
         if _US_CODE_PATTERN.match(cleaned.upper()) or cleaned.upper().endswith(
             _US_SUFFIX
         ) or _US_TICKER_PATTERN.match(cleaned.upper()):
-            return self._fetch_us(symbol, start, end)
+            return self._fetch_us(symbol, start, end, period_type)
 
         start_date = _to_ak_date(start)
         end_date = _to_ak_date(end)
+        period = _period_to_ak(period_type)
         normalized_symbol, exchange = _normalize_symbol(symbol)
 
         primary_frame: pd.DataFrame | None = None
+        primary_used_native_period = False
         try:
             primary_frame = ak.stock_zh_a_hist(
                 symbol=normalized_symbol,
+                period=period,
                 start_date=start_date or "",
                 end_date=end_date or "",
                 adjust=self._adjust,
             )
+            primary_used_native_period = True
+        except TypeError:
+            if period == "daily":
+                try:
+                    primary_frame = ak.stock_zh_a_hist(
+                        symbol=normalized_symbol,
+                        start_date=start_date or "",
+                        end_date=end_date or "",
+                        adjust=self._adjust,
+                    )
+                except Exception as exc:  # pragma: no cover - network/data issues
+                    primary_error = exc
+                else:
+                    primary_error = None
+            else:
+                primary_error = None
         except Exception as exc:  # pragma: no cover - network/data issues
             primary_error = exc
         else:
             primary_error = None
 
         if primary_frame is not None and not primary_frame.empty:
+            if period_type != "1d" and not primary_used_native_period:
+                filtered = _filter_frame_by_dates(primary_frame, start, end)
+                resampled = _resample_ohlcv(
+                    filtered, _period_to_rule(period_type)
+                )
+                resampled = _filter_frame_by_dates(resampled, start, end)
+                return _normalize_frame(resampled)
             return _normalize_frame(primary_frame)
 
         fallback_frame: pd.DataFrame | None = None
+        fallback_used_native_period = False
         if exchange is not None:
             try:
                 fallback_frame = ak.stock_zh_a_hist_tx(
                     symbol=f"{exchange}{normalized_symbol}",
+                    period=period,
                     start_date=start_date or "",
                     end_date=end_date or "",
                     adjust=self._adjust,
                 )
+                fallback_used_native_period = True
+            except TypeError:
+                try:
+                    fallback_frame = ak.stock_zh_a_hist_tx(
+                        symbol=f"{exchange}{normalized_symbol}",
+                        start_date=start_date or "",
+                        end_date=end_date or "",
+                        adjust=self._adjust,
+                    )
+                except Exception:
+                    fallback_frame = None
             except Exception:
                 fallback_frame = None
 
         if fallback_frame is not None and not fallback_frame.empty:
+            if period_type != "1d" and not fallback_used_native_period:
+                filtered = _filter_frame_by_dates(fallback_frame, start, end)
+                resampled = _resample_ohlcv(
+                    filtered, _period_to_rule(period_type)
+                )
+                resampled = _filter_frame_by_dates(resampled, start, end)
+                return _normalize_frame(resampled)
             return _normalize_frame(fallback_frame)
 
         if primary_frame is not None:

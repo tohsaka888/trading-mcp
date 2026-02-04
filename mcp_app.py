@@ -63,6 +63,9 @@ def create_server() -> FastMCP:
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
+        period_type: Annotated[
+            str, Field("1d", description="Data interval: 1d, 1w, 1m")
+        ] = "1d",
         start_date: Annotated[
             str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
         ] = None,
@@ -78,6 +81,7 @@ def create_server() -> FastMCP:
             symbol=symbol,
             limit=limit,
             offset=offset,
+            period_type=period_type,
             start_date=start_date,
             end_date=end_date,
         )
@@ -124,6 +128,9 @@ def create_server() -> FastMCP:
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
+        period_type: Annotated[
+            str, Field("1d", description="Data interval: 1d, 1w, 1m")
+        ] = "1d",
         start_date: Annotated[
             str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
         ] = None,
@@ -140,6 +147,7 @@ def create_server() -> FastMCP:
             limit=limit,
             period=period,
             offset=offset,
+            period_type=period_type,
             start_date=start_date,
             end_date=end_date,
         )
@@ -189,6 +197,9 @@ def create_server() -> FastMCP:
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
+        period_type: Annotated[
+            str, Field("1d", description="Data interval: 1d, 1w, 1m")
+        ] = "1d",
         start_date: Annotated[
             str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
         ] = None,
@@ -206,6 +217,7 @@ def create_server() -> FastMCP:
             period=period,
             ma_type=ma_type,
             offset=offset,
+            period_type=period_type,
             start_date=start_date,
             end_date=end_date,
         )
@@ -260,6 +272,9 @@ def create_server() -> FastMCP:
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
+        period_type: Annotated[
+            str, Field("1d", description="Data interval: 1d, 1w, 1m")
+        ] = "1d",
         start_date: Annotated[
             str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
         ] = None,
@@ -278,6 +293,7 @@ def create_server() -> FastMCP:
             slow_period=slow_period,
             signal_period=signal_period,
             offset=offset,
+            period_type=period_type,
             start_date=start_date,
             end_date=end_date,
         )
@@ -308,15 +324,17 @@ def create_server() -> FastMCP:
     def tool_usage() -> str:
         return (
             "Available tools:\n"
-            "- trading_kline(symbol, limit, offset=0, start_date=None, end_date=None, "
-            "response_format='markdown'): return OHLCV bars.\n"
+            "- trading_kline(symbol, limit, offset=0, period_type='1d', start_date=None, "
+            "end_date=None, response_format='markdown'): return OHLCV bars.\n"
             "- trading_macd(symbol, limit, fast_period=12, slow_period=26, signal_period=9, "
-            "offset=0, start_date=None, end_date=None, response_format='markdown'): "
+            "offset=0, period_type='1d', start_date=None, end_date=None, "
+            "response_format='markdown'): "
             "return MACD, signal, histogram values.\n"
-            "- trading_rsi(symbol, limit, period=14, offset=0, start_date=None, "
+            "- trading_rsi(symbol, limit, period=14, offset=0, period_type='1d', start_date=None, "
             "end_date=None, response_format='markdown'): return RSI values.\n"
-            "- trading_ma(symbol, limit, period=20, ma_type='sma', offset=0, start_date=None, "
-            "end_date=None, response_format='markdown'): return moving average values.\n"
+            "- trading_ma(symbol, limit, period=20, ma_type='sma', offset=0, period_type='1d', "
+            "start_date=None, end_date=None, response_format='markdown'): "
+            "return moving average values.\n"
             "Inputs require a positive limit and a non-empty symbol. "
             "US symbols: AAPL.US, AAPL, or 105.AAPL."
         )

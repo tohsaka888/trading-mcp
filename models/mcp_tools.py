@@ -8,12 +8,17 @@ from pydantic import BaseModel, Field, ValidationInfo, field_serializer, field_v
 
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _COMPACT_DATE_PATTERN = re.compile(r"^\d{8}$")
+_PERIOD_TYPES = {"1d", "1w", "1m"}
 
 
 class ToolRequest(BaseModel):
     symbol: str = Field(..., min_length=1, description="Market symbol identifier")
     limit: int = Field(..., ge=1, description="Number of recent data points to return")
     offset: int = Field(0, ge=0, description="Number of most recent points to skip")
+    period_type: str = Field(
+        "1d",
+        description="Data interval: 1d, 1w, 1m",
+    )
     start_date: str | None = Field(
         None,
         description="Start date (YYYY-MM-DD or YYYYMMDD)",
@@ -34,6 +39,14 @@ class ToolRequest(BaseModel):
         if _DATE_PATTERN.match(cleaned) or _COMPACT_DATE_PATTERN.match(cleaned):
             return cleaned
         raise ValueError("Date must be in YYYY-MM-DD or YYYYMMDD format")
+
+    @field_validator("period_type")
+    @classmethod
+    def _validate_period_type(cls, value: str) -> str:
+        normalized = value.lower()
+        if normalized not in _PERIOD_TYPES:
+            raise ValueError("period_type must be one of: 1d, 1w, 1m")
+        return normalized
 
 
 class KlineRequest(ToolRequest):
@@ -129,6 +142,7 @@ class ToolResponse(BaseModel):
     offset: int = Field(..., ge=0, description="Number of most recent points skipped")
     has_more: bool = Field(..., description="Whether older data is available")
     next_offset: int | None = Field(None, ge=0, description="Offset for the next page")
+    period_type: str = Field(..., description="Applied data interval: 1d, 1w, 1m")
     start_date: str | None = Field(None, description="Applied start date filter")
     end_date: str | None = Field(None, description="Applied end date filter")
 

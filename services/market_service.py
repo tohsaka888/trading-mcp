@@ -213,7 +213,12 @@ class MarketService:
         self._engine = engine
 
     def kline(self, request: KlineRequest) -> KlineResponse:
-        frame = self._client.fetch(request.symbol, request.start_date, request.end_date)
+        frame = self._client.fetch(
+            request.symbol,
+            request.start_date,
+            request.end_date,
+            period_type=request.period_type,
+        )
         bars = build_kline_bars(frame)
         items, total, count, has_more, next_offset = _paginate_latest(
             bars, request.limit, request.offset
@@ -227,12 +232,18 @@ class MarketService:
             offset=request.offset,
             has_more=has_more,
             next_offset=next_offset,
+            period_type=request.period_type,
             start_date=request.start_date,
             end_date=request.end_date,
         )
 
     def rsi(self, request: RsiRequest) -> RsiResponse:
-        frame = self._client.fetch(request.symbol, request.start_date, request.end_date)
+        frame = self._client.fetch(
+            request.symbol,
+            request.start_date,
+            request.end_date,
+            period_type=request.period_type,
+        )
         if frame is None or frame.empty:
             return RsiResponse(
                 symbol=request.symbol,
@@ -243,6 +254,7 @@ class MarketService:
                 offset=request.offset,
                 has_more=False,
                 next_offset=None,
+                period_type=request.period_type,
                 start_date=request.start_date,
                 end_date=request.end_date,
             )
@@ -262,12 +274,18 @@ class MarketService:
             offset=request.offset,
             has_more=has_more,
             next_offset=next_offset,
+            period_type=request.period_type,
             start_date=request.start_date,
             end_date=request.end_date,
         )
 
     def ma(self, request: MaRequest) -> MaResponse:
-        frame = self._client.fetch(request.symbol, request.start_date, request.end_date)
+        frame = self._client.fetch(
+            request.symbol,
+            request.start_date,
+            request.end_date,
+            period_type=request.period_type,
+        )
         if frame is None or frame.empty:
             return MaResponse(
                 symbol=request.symbol,
@@ -278,6 +296,7 @@ class MarketService:
                 offset=request.offset,
                 has_more=False,
                 next_offset=None,
+                period_type=request.period_type,
                 start_date=request.start_date,
                 end_date=request.end_date,
             )
@@ -306,12 +325,18 @@ class MarketService:
             offset=request.offset,
             has_more=has_more,
             next_offset=next_offset,
+            period_type=request.period_type,
             start_date=request.start_date,
             end_date=request.end_date,
         )
 
     def macd(self, request: MacdRequest) -> MacdResponse:
-        frame = self._client.fetch(request.symbol, request.start_date, request.end_date)
+        frame = self._client.fetch(
+            request.symbol,
+            request.start_date,
+            request.end_date,
+            period_type=request.period_type,
+        )
         if frame is None or frame.empty:
             return MacdResponse(
                 symbol=request.symbol,
@@ -322,6 +347,7 @@ class MarketService:
                 offset=request.offset,
                 has_more=False,
                 next_offset=None,
+                period_type=request.period_type,
                 start_date=request.start_date,
                 end_date=request.end_date,
             )
@@ -346,6 +372,7 @@ class MarketService:
             offset=request.offset,
             has_more=has_more,
             next_offset=next_offset,
+            period_type=request.period_type,
             start_date=request.start_date,
             end_date=request.end_date,
         )
