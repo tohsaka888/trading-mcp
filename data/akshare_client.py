@@ -166,7 +166,7 @@ def _normalize_frame(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 _PERIOD_MAP = {"1d": "daily", "1w": "weekly", "1m": "monthly"}
-_PERIOD_RULES = {"1w": "W-FRI", "1m": "M"}
+_PERIOD_RULES = {"1w": "W-FRI", "1m": "ME"}
 
 
 def _period_to_ak(period_type: str) -> str:
@@ -442,32 +442,19 @@ class AkshareMarketDataClient:
             return _normalize_frame(primary_frame)
 
         fallback_frame: pd.DataFrame | None = None
-        fallback_used_native_period = False
         if exchange is not None:
             try:
                 fallback_frame = ak.stock_zh_a_hist_tx(
                     symbol=f"{exchange}{normalized_symbol}",
-                    period=period,
                     start_date=start_date or "",
                     end_date=end_date or "",
                     adjust=self._adjust,
                 )
-                fallback_used_native_period = True
-            except TypeError:
-                try:
-                    fallback_frame = ak.stock_zh_a_hist_tx(
-                        symbol=f"{exchange}{normalized_symbol}",
-                        start_date=start_date or "",
-                        end_date=end_date or "",
-                        adjust=self._adjust,
-                    )
-                except Exception:
-                    fallback_frame = None
             except Exception:
                 fallback_frame = None
 
         if fallback_frame is not None and not fallback_frame.empty:
-            if period_type != "1d" and not fallback_used_native_period:
+            if period_type != "1d":
                 filtered = _filter_frame_by_dates(fallback_frame, start, end)
                 resampled = _resample_ohlcv(
                     filtered, _period_to_rule(period_type)
