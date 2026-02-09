@@ -15,7 +15,7 @@ def test_fetch_falls_back_to_tencent_with_normalized_symbol(monkeypatch) -> None
         return pd.DataFrame()
 
     def fake_hist_tx(
-        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+        *, symbol: str, start_date: str, end_date: str, adjust: str
     ):
         calls["hist_tx"] = symbol
         return pd.DataFrame(
@@ -220,3 +220,45 @@ def test_fetch_us_resamples_weekly_from_daily(monkeypatch) -> None:
     assert frame["low"].tolist() == [0.5, 5.5]
     assert frame["close"].tolist() == [5.1, 10.1]
     assert frame["volume"].tolist() == [500, 1000]
+
+
+def test_fetch_us_resamples_monthly_from_daily(monkeypatch) -> None:
+    def fake_spot_em():
+        return pd.DataFrame()
+
+    def fake_us_hist(*, symbol: str, period: str, start_date: str, end_date: str, adjust: str):
+        raise AssertionError("hist should not be called when mapping is missing")
+
+    def fake_us_daily(*, symbol: str, adjust: str):
+        return pd.DataFrame(
+            {
+                "date": [
+                    "2024-01-30",
+                    "2024-01-31",
+                    "2024-02-01",
+                    "2024-02-29",
+                ],
+                "open": [10, 11, 12, 13],
+                "high": [11, 12, 13, 14],
+                "low": [9, 10, 11, 12],
+                "close": [10.5, 11.5, 12.5, 13.5],
+                "volume": [100, 200, 300, 400],
+            }
+        )
+
+    monkeypatch.setattr(akshare_client.ak, "stock_us_spot_em", fake_spot_em)
+    monkeypatch.setattr(akshare_client.ak, "stock_us_hist", fake_us_hist)
+    monkeypatch.setattr(akshare_client.ak, "stock_us_daily", fake_us_daily)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch("AAPL", "2024-01-01", "2024-02-29", period_type="1m")
+
+    assert frame["date"].tolist() == [
+        pd.Timestamp("2024-01-31"),
+        pd.Timestamp("2024-02-29"),
+    ]
+    assert frame["open"].tolist() == [10, 12]
+    assert frame["high"].tolist() == [12, 14]
+    assert frame["low"].tolist() == [9, 11]
+    assert frame["close"].tolist() == [11.5, 13.5]
+    assert frame["volume"].tolist() == [300, 700]
