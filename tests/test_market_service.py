@@ -20,6 +20,7 @@ from services.market_service import MarketService
 class FakeClient:
     def __init__(self) -> None:
         self.last_period_type: str | None = None
+        self.last_end: str | None = None
 
     def fetch(
         self,
@@ -29,6 +30,7 @@ class FakeClient:
         period_type: str = "1d",
     ) -> pd.DataFrame:  # type: ignore[override]
         self.last_period_type = period_type
+        self.last_end = end
         return pd.DataFrame(
             {
                 "date": ["2024-01-01", "2024-01-02", "2024-01-03"],
@@ -84,6 +86,14 @@ def test_rsi_points_limit() -> None:
     assert response.items[-1].timestamp == datetime(2024, 1, 3)
     assert response.period_type == "1d"
     assert client.last_period_type == "1d"
+
+
+def test_weekly_request_defaults_end_date_to_today() -> None:
+    client = FakeClient()
+    service = MarketService(client, FakeEngine())
+    response = service.kline(KlineRequest(symbol="000001", limit=2, period_type="1w"))
+    assert response.end_date is not None
+    assert client.last_end == response.end_date
 
 
 def test_ma_points_limit() -> None:

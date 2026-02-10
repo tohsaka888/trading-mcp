@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from datetime import datetime
+from datetime import date, datetime
 
 from models.mcp_tools import (
     FundamentalCnIndicatorsRequest,
@@ -69,6 +69,13 @@ def test_date_validation_rejects_invalid() -> None:
 def test_period_type_validation() -> None:
     with pytest.raises(ValidationError):
         KlineRequest(symbol="000001", limit=5, period_type="weekly")
+
+
+def test_weekly_monthly_default_end_date() -> None:
+    weekly = KlineRequest(symbol="000001", limit=5, period_type="1w")
+    monthly = KlineRequest(symbol="000001", limit=5, period_type="1m")
+    assert weekly.end_date == date.today().isoformat()
+    assert monthly.end_date == date.today().isoformat()
 
 
 def test_timestamp_json_includes_timezone() -> None:
