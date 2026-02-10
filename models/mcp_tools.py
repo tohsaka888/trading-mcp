@@ -1,15 +1,23 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import re
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationInfo, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _COMPACT_DATE_PATTERN = re.compile(r"^\d{8}$")
 _PERIOD_TYPES = {"1d", "1w", "1m"}
+_AGGREGATED_PERIOD_TYPES = {"1w", "1m"}
 _CN_FINANCIAL_INDICATORS = {"按报告期", "按单季度"}
 _US_FINANCIAL_REPORT_SYMBOLS = {"资产负债表", "综合损益表", "现金流量表"}
 _US_FINANCIAL_INDICATORS = {"年报", "单季报", "累计季报"}
@@ -54,6 +62,12 @@ class ToolRequest(DateRangeRequest):
         if normalized not in _PERIOD_TYPES:
             raise ValueError("period_type must be one of: 1d, 1w, 1m")
         return normalized
+
+    @model_validator(mode="after")
+    def _default_end_date_for_aggregated_periods(self) -> "ToolRequest":
+        if self.period_type in _AGGREGATED_PERIOD_TYPES and self.end_date is None:
+            self.end_date = date.today().isoformat()
+        return self
 
 
 class KlineRequest(ToolRequest):
