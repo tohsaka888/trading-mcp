@@ -22,6 +22,13 @@ def test_kline_limit_validation() -> None:
         KlineRequest(symbol="000001", limit=0)
 
 
+def test_kline_defaults() -> None:
+    request = KlineRequest(symbol="000001")
+    assert request.limit == 30
+    assert request.start_date is None
+    assert request.period_type == "1d"
+
+
 def test_rsi_defaults() -> None:
     request = RsiRequest(symbol="000001", limit=5)
     assert request.period == 14

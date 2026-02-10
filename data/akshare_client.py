@@ -41,6 +41,15 @@ def _to_ak_date(value: DateLike | None) -> str | None:
     raise TypeError(f"Unsupported date type: {type(value)!r}")
 
 
+def _resolve_tx_date_range(
+    start_date: str | None,
+    end_date: str | None,
+) -> tuple[str, str]:
+    resolved_start = start_date or "19000101"
+    resolved_end = end_date or date.today().strftime("%Y%m%d")
+    return resolved_start, resolved_end
+
+
 def _coerce_date(value: DateLike | None) -> pd.Timestamp | None:
     if value is None:
         return None
@@ -548,11 +557,12 @@ class AkshareMarketDataClient:
 
         fallback_frame: pd.DataFrame | None = None
         if exchange is not None:
+            tx_start_date, tx_end_date = _resolve_tx_date_range(start_date, end_date)
             try:
                 fallback_frame = ak.stock_zh_a_hist_tx(
                     symbol=f"{exchange}{normalized_symbol}",
-                    start_date=start_date or "",
-                    end_date=end_date or "",
+                    start_date=tx_start_date,
+                    end_date=tx_end_date,
                     adjust=self._adjust,
                 )
             except Exception:

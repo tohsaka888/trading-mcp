@@ -82,7 +82,7 @@ python main.py
 ```
 
 可用工具：
-- `trading_kline(symbol, limit, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_kline(symbol, limit=30, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_macd(symbol, limit, fast_period=12, slow_period=26, signal_period=9, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_rsi(symbol, limit, period=14, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_ma(symbol, limit, period=20, ma_type="sma", offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`

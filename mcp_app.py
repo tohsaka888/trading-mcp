@@ -75,8 +75,8 @@ def create_server() -> FastMCP:
             ),
         ],
         limit: Annotated[
-            int, Field(..., ge=1, description="Number of recent data points to return")
-        ],
+            int, Field(30, ge=1, description="Number of recent data points to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
@@ -646,7 +646,7 @@ def create_server() -> FastMCP:
     def tool_usage() -> str:
         return (
             "Available tools:\n"
-            "- trading_kline(symbol, limit, offset=0, period_type='1d', start_date=None, "
+            "- trading_kline(symbol, limit=30, offset=0, period_type='1d', start_date=None, "
             "end_date=None, response_format='markdown'): return OHLCV bars.\n"
             "- trading_macd(symbol, limit, fast_period=12, slow_period=26, signal_period=9, "
             "offset=0, period_type='1d', start_date=None, end_date=None, "
