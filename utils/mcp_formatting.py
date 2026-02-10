@@ -4,12 +4,18 @@ from datetime import datetime
 from typing import Iterable
 
 from models.mcp_tools import (
+    FundamentalCnIndicatorsResponse,
+    FundamentalUsIndicatorsResponse,
+    FundamentalUsReportResponse,
     KlineResponse,
     MacdResponse,
     MaResponse,
     RsiResponse,
     VolumeResponse,
 )
+
+_FUNDAMENTAL_PREVIEW_ROWS = 20
+_FUNDAMENTAL_PREVIEW_COLUMNS = 12
 
 
 def _fmt_value(value: object) -> str:
@@ -131,4 +137,109 @@ def format_volume_response(response: VolumeResponse) -> str:
         for item in response.items
     ]
     lines.extend(_format_table(["timestamp", "volume", "amount", "turnover_rate"], rows))
+    return "\n".join(lines)
+
+
+def _format_fundamental_preview(
+    columns: list[str], items: list[dict[str, object]]
+) -> list[str]:
+    if not columns:
+        return ["No rows returned."]
+
+    preview_columns = columns[:_FUNDAMENTAL_PREVIEW_COLUMNS]
+    preview_items = items[:_FUNDAMENTAL_PREVIEW_ROWS]
+    rows = [
+        [item.get(column) for column in preview_columns]
+        for item in preview_items
+    ]
+
+    lines: list[str] = []
+    lines.append(f"Columns total: {len(columns)}")
+    lines.append("Column preview: " + ", ".join(preview_columns))
+    lines.append("")
+    lines.append("Preview rows:")
+    lines.extend(_format_table(preview_columns, rows))
+
+    if len(columns) > _FUNDAMENTAL_PREVIEW_COLUMNS:
+        lines.append(
+            f"Only first {_FUNDAMENTAL_PREVIEW_COLUMNS} columns are shown in markdown."
+        )
+    if len(items) > _FUNDAMENTAL_PREVIEW_ROWS:
+        lines.append(
+            f"Only first {_FUNDAMENTAL_PREVIEW_ROWS} rows are shown in markdown."
+        )
+    lines.append("Full rows are available in structuredContent.items.")
+    return lines
+
+
+def format_fundamental_cn_indicators_response(
+    response: FundamentalCnIndicatorsResponse,
+) -> str:
+    lines = [f"# trading_fundamental_cn_indicators"]
+    lines.append(f"Symbol: `{response.symbol}`")
+    lines.append(f"Indicator: `{response.indicator}`")
+    lines.append(
+        " | ".join(
+            [
+                f"Limit: {response.limit}",
+                f"Offset: {response.offset}",
+                f"Count: {response.count}",
+                f"Total: {response.total}",
+            ]
+        )
+    )
+    lines.append(f"Has more: {response.has_more} | Next offset: {response.next_offset}")
+    lines.append(
+        f"Date range: {response.start_date or '-'} to {response.end_date or '-'}"
+    )
+    lines.append("")
+    lines.extend(_format_fundamental_preview(response.columns, response.items))
+    return "\n".join(lines)
+
+
+def format_fundamental_us_report_response(response: FundamentalUsReportResponse) -> str:
+    lines = [f"# trading_fundamental_us_report"]
+    lines.append(f"Stock: `{response.stock}`")
+    lines.append(f"Report: `{response.symbol}` | Indicator: `{response.indicator}`")
+    lines.append(
+        " | ".join(
+            [
+                f"Limit: {response.limit}",
+                f"Offset: {response.offset}",
+                f"Count: {response.count}",
+                f"Total: {response.total}",
+            ]
+        )
+    )
+    lines.append(f"Has more: {response.has_more} | Next offset: {response.next_offset}")
+    lines.append(
+        f"Date range: {response.start_date or '-'} to {response.end_date or '-'}"
+    )
+    lines.append("")
+    lines.extend(_format_fundamental_preview(response.columns, response.items))
+    return "\n".join(lines)
+
+
+def format_fundamental_us_indicators_response(
+    response: FundamentalUsIndicatorsResponse,
+) -> str:
+    lines = [f"# trading_fundamental_us_indicators"]
+    lines.append(f"Symbol: `{response.symbol}`")
+    lines.append(f"Indicator: `{response.indicator}`")
+    lines.append(
+        " | ".join(
+            [
+                f"Limit: {response.limit}",
+                f"Offset: {response.offset}",
+                f"Count: {response.count}",
+                f"Total: {response.total}",
+            ]
+        )
+    )
+    lines.append(f"Has more: {response.has_more} | Next offset: {response.next_offset}")
+    lines.append(
+        f"Date range: {response.start_date or '-'} to {response.end_date or '-'}"
+    )
+    lines.append("")
+    lines.extend(_format_fundamental_preview(response.columns, response.items))
     return "\n".join(lines)

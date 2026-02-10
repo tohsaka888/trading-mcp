@@ -21,6 +21,7 @@ _AMOUNT_COLUMNS = ("amount", "成交额")
 _US_CODE_PATTERN = re.compile(r"^\d{3}\.[A-Z0-9.-]+$")
 _US_SUFFIX = ".US"
 _US_TICKER_PATTERN = re.compile(r"^[A-Z][A-Z.-]*$")
+_US_FUNDAMENTAL_TICKER_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 _US_EXCHANGE_SUFFIXES = (".NYSE", ".NASDAQ", ".AMEX")
 _US_CACHE_TTL_SECONDS = 24 * 60 * 60
 
@@ -83,6 +84,18 @@ def _normalize_symbol(symbol: str) -> tuple[str, str | None]:
     return code, exchange
 
 
+def _normalize_cn_financial_symbol(symbol: str) -> str:
+    code, exchange = _normalize_symbol(symbol)
+    if exchange == "bj":
+        raise MarketDataError(
+            "Beijing Stock Exchange symbols are not supported by "
+            "stock_financial_analysis_indicator_em."
+        )
+    if exchange not in {"sz", "sh"}:
+        raise MarketDataError("Unable to infer A-share exchange suffix for symbol")
+    return f"{code}.{exchange.upper()}"
+
+
 def _find_date_column(columns: Iterable[str]) -> str | None:
     for name in _DATE_COLUMNS:
         if name in columns:
@@ -125,6 +138,30 @@ def _normalize_us_symbol(symbol: str) -> tuple[str, str | None]:
         return upper, None
 
     raise MarketDataError("Symbol is missing or invalid")
+
+
+def _normalize_us_financial_symbol(symbol: str) -> str:
+    cleaned = symbol.strip()
+    if not cleaned:
+        raise MarketDataError("Symbol is missing or invalid")
+
+    upper = cleaned.upper()
+    for suffix in _US_EXCHANGE_SUFFIXES:
+        if upper.endswith(suffix):
+            raise MarketDataError(
+                "Exchange suffix not supported. Use .US or a raw ticker like AAPL."
+            )
+
+    ticker = upper
+    if _US_CODE_PATTERN.match(upper):
+        _, ticker = upper.split(".", 1)
+    elif upper.endswith(_US_SUFFIX):
+        ticker = upper[: -len(_US_SUFFIX)]
+
+    ticker = ticker.replace("-", "_").replace(".", "_")
+    if not _US_FUNDAMENTAL_TICKER_PATTERN.match(ticker):
+        raise MarketDataError("Symbol is missing or invalid")
+    return ticker
 
 
 def _filter_frame_by_dates(
@@ -387,6 +424,68 @@ class AkshareMarketDataClient:
             raise MarketDataError(f"Akshare US fetch failed for symbol={symbol}") from primary_error
 
         return pd.DataFrame()
+
+    def fetch_cn_financial_indicators(
+        self,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        normalized_symbol = _normalize_cn_financial_symbol(symbol)
+        try:
+            frame = ak.stock_financial_analysis_indicator_em(
+                symbol=normalized_symbol,
+                indicator=indicator,
+            )
+        except Exception as exc:
+            raise MarketDataError(
+                "Akshare CN financial indicators fetch failed "
+                f"for symbol={normalized_symbol}, indicator={indicator}"
+            ) from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
+    def fetch_us_financial_report(
+        self,
+        stock: str,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        normalized_stock = _normalize_us_financial_symbol(stock)
+        try:
+            frame = ak.stock_financial_us_report_em(
+                stock=normalized_stock,
+                symbol=symbol,
+                indicator=indicator,
+            )
+        except Exception as exc:
+            raise MarketDataError(
+                "Akshare US financial report fetch failed "
+                f"for stock={normalized_stock}, symbol={symbol}, indicator={indicator}"
+            ) from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
+    def fetch_us_financial_indicators(
+        self,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        normalized_symbol = _normalize_us_financial_symbol(symbol)
+        try:
+            frame = ak.stock_financial_us_analysis_indicator_em(
+                symbol=normalized_symbol,
+                indicator=indicator,
+            )
+        except Exception as exc:
+            raise MarketDataError(
+                "Akshare US financial indicators fetch failed "
+                f"for symbol={normalized_symbol}, indicator={indicator}"
+            ) from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
 
     def fetch(
         self,

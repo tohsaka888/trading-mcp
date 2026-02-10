@@ -4,6 +4,9 @@ from pydantic import ValidationError
 from datetime import datetime
 
 from models.mcp_tools import (
+    FundamentalCnIndicatorsRequest,
+    FundamentalUsIndicatorsRequest,
+    FundamentalUsReportRequest,
     KlineBar,
     KlineRequest,
     MacdRequest,
@@ -88,3 +91,42 @@ def test_volume_point_timestamp_json_includes_timezone() -> None:
     point = VolumePoint(timestamp=datetime(2024, 1, 1, 0, 0, 0), volume=100.0)
     payload = point.model_dump(mode="json")
     assert payload["timestamp"].endswith("+00:00")
+
+
+def test_fundamental_cn_request_defaults() -> None:
+    request = FundamentalCnIndicatorsRequest(symbol="000001")
+    assert request.indicator == "按报告期"
+    assert request.limit == 200
+    assert request.offset == 0
+
+
+def test_fundamental_cn_request_indicator_validation() -> None:
+    with pytest.raises(ValidationError):
+        FundamentalCnIndicatorsRequest(symbol="000001", indicator="季度")
+
+
+def test_fundamental_us_report_defaults() -> None:
+    request = FundamentalUsReportRequest(stock="TSLA")
+    assert request.symbol == "资产负债表"
+    assert request.indicator == "年报"
+    assert request.limit == 200
+
+
+def test_fundamental_us_report_symbol_validation() -> None:
+    with pytest.raises(ValidationError):
+        FundamentalUsReportRequest(stock="TSLA", symbol="利润表")
+
+
+def test_fundamental_us_indicators_indicator_validation() -> None:
+    with pytest.raises(ValidationError):
+        FundamentalUsIndicatorsRequest(symbol="TSLA", indicator="季度")
+
+
+def test_fundamental_request_date_validation() -> None:
+    request = FundamentalUsIndicatorsRequest(
+        symbol="TSLA",
+        start_date="2024-01-01",
+        end_date="20240131",
+    )
+    assert request.start_date == "2024-01-01"
+    assert request.end_date == "20240131"

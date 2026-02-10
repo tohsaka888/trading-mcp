@@ -4,6 +4,7 @@
 
 **项目内容**
 - 提供股票行情数据查询与基础技术指标计算（K 线、RSI、MA、MACD）。
+- 提供中长线基本面数据查询（A 股主要指标、美股三大报表、美股主要指标）。
 - 统一的市场数据访问层，支持 A 股与美股（如 `AAPL.US`）。
 - MCP 工具化接口，支持 Markdown 或 JSON 输出。
 
@@ -86,6 +87,24 @@ python main.py
 - `trading_rsi(symbol, limit, period=14, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_ma(symbol, limit, period=20, ma_type="sma", offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_volume(symbol, limit, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_fundamental_cn_indicators(symbol, indicator="按报告期", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_fundamental_us_report(stock, symbol="资产负债表", indicator="年报", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_fundamental_us_indicators(symbol, indicator="年报", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
+
+`trading_fundamental_cn_indicators` 参数说明：
+- `indicator` 枚举：`按报告期`、`按单季度`
+- `symbol` 兼容输入：`000001`、`000001.SZ`、`600519.SH`（自动补全或规范化后缀）
+- 基本面结果按原始行格式返回：`columns + items`
+
+`trading_fundamental_us_report` 参数说明：
+- `symbol`（报表类型）枚举：`资产负债表`、`综合损益表`、`现金流量表`
+- `indicator`（报表周期）枚举：`年报`、`单季报`、`累计季报`
+- `stock` 兼容输入：`TSLA`、`AAPL.US`、`105.AAPL`、`BRK.B`（内部规范化为 AkShare 可识别 ticker）
+
+`trading_fundamental_us_indicators` 参数说明：
+- `indicator` 枚举：`年报`、`单季报`、`累计季报`
+- `symbol` 兼容输入：`TSLA`、`AAPL.US`、`105.AAPL`、`BRK.B`
+- 基本面结果按原始行格式返回：`columns + items`
 
 `trading_volume` 字段说明：
 - 返回字段：`timestamp`、`volume`、`amount`、`turnover_rate`
@@ -97,22 +116,24 @@ python main.py
 
 符号说明：
 - A 股示例：`000001`、`300308.SZ`
-- 美股示例：`AAPL.US`、`AAPL`、`105.AAPL`
+- 美股示例：`AAPL.US`、`AAPL`、`105.AAPL`、`BRK.B`
 
 **响应结构（structuredContent）**
 
 ```json
 {
-  "symbol": "000001",
+  "stock": "TSLA",
+  "symbol": "资产负债表",
+  "indicator": "年报",
+  "columns": ["REPORT_DATE", "ITEM_NAME", "AMOUNT"],
   "items": [],
   "count": 0,
   "total": 0,
-  "limit": 20,
+  "limit": 200,
   "offset": 0,
   "has_more": false,
   "next_offset": null,
-  "period_type": "1d",
-  "start_date": "2024-01-01",
-  "end_date": "2024-02-01"
+  "start_date": null,
+  "end_date": null
 }
 ```

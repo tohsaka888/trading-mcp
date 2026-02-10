@@ -3,6 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 
 from models.mcp_tools import (
+    FundamentalCnIndicatorsResponse,
+    FundamentalUsIndicatorsResponse,
+    FundamentalUsReportResponse,
     KlineBar,
     KlineResponse,
     MacdPoint,
@@ -15,6 +18,9 @@ from models.mcp_tools import (
     VolumeResponse,
 )
 from utils.mcp_formatting import (
+    format_fundamental_cn_indicators_response,
+    format_fundamental_us_indicators_response,
+    format_fundamental_us_report_response,
     format_kline_response,
     format_macd_response,
     format_ma_response,
@@ -147,3 +153,73 @@ def test_format_volume_response_contains_table_and_units() -> None:
     assert "# trading_volume" in text
     assert "Units: volume=share, amount=USD, turnover_rate=percent" in text
     assert "| timestamp | volume | amount | turnover_rate |" in text
+
+
+def test_format_fundamental_cn_indicators_contains_preview() -> None:
+    response = FundamentalCnIndicatorsResponse(
+        symbol="000001",
+        indicator="按报告期",
+        count=1,
+        total=1,
+        limit=200,
+        offset=0,
+        has_more=False,
+        next_offset=None,
+        start_date="2024-01-01",
+        end_date="2024-12-31",
+        columns=["REPORT_DATE", "ROE"],
+        items=[{"REPORT_DATE": "2024-12-31T00:00:00", "ROE": 10.5}],
+    )
+    text = format_fundamental_cn_indicators_response(response)
+    assert "# trading_fundamental_cn_indicators" in text
+    assert "Columns total: 2" in text
+    assert "Full rows are available in structuredContent.items." in text
+
+
+def test_format_fundamental_us_report_contains_context() -> None:
+    response = FundamentalUsReportResponse(
+        stock="TSLA",
+        symbol="资产负债表",
+        indicator="年报",
+        count=1,
+        total=1,
+        limit=200,
+        offset=0,
+        has_more=False,
+        next_offset=None,
+        start_date=None,
+        end_date=None,
+        columns=["REPORT_DATE", "ITEM_NAME", "AMOUNT"],
+        items=[
+            {
+                "REPORT_DATE": "2024-12-31T00:00:00",
+                "ITEM_NAME": "Total Assets",
+                "AMOUNT": 120.0,
+            }
+        ],
+    )
+    text = format_fundamental_us_report_response(response)
+    assert "# trading_fundamental_us_report" in text
+    assert "Stock: `TSLA`" in text
+    assert "Report: `资产负债表` | Indicator: `年报`" in text
+
+
+def test_format_fundamental_us_indicators_truncates_columns() -> None:
+    columns = [f"c{i}" for i in range(1, 15)]
+    response = FundamentalUsIndicatorsResponse(
+        symbol="TSLA",
+        indicator="年报",
+        count=1,
+        total=1,
+        limit=200,
+        offset=0,
+        has_more=False,
+        next_offset=None,
+        start_date=None,
+        end_date=None,
+        columns=columns,
+        items=[{column: column for column in columns}],
+    )
+    text = format_fundamental_us_indicators_response(response)
+    assert "# trading_fundamental_us_indicators" in text
+    assert "Only first 12 columns are shown in markdown." in text
