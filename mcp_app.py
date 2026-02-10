@@ -30,6 +30,8 @@ from utils.mcp_formatting import (
     format_rsi_response,
 )
 
+PeriodType = Literal["1d", "1w", "1m"]
+
 
 def create_server() -> FastMCP:
     settings = McpServerSettings()
@@ -45,7 +47,10 @@ def create_server() -> FastMCP:
     )
 
     @mcp.tool(
-        description="Return OHLCV bars with pagination metadata.",
+        description=(
+            "Return OHLCV bars with pagination metadata. "
+            "period_type enum: '1d' (daily), '1w' (weekly), '1m' (monthly)."
+        ),
         annotations=annotations,
     )
     def trading_kline(
@@ -64,7 +69,11 @@ def create_server() -> FastMCP:
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
         period_type: Annotated[
-            str, Field("1d", description="Data interval: 1d, 1w, 1m")
+            PeriodType,
+            Field(
+                "1d",
+                description="Data interval enum. Allowed values: '1d', '1w', '1m'.",
+            ),
         ] = "1d",
         start_date: Annotated[
             str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
@@ -109,7 +118,10 @@ def create_server() -> FastMCP:
         )
 
     @mcp.tool(
-        description="Return RSI values with pagination metadata.",
+        description=(
+            "Return RSI values with pagination metadata. "
+            "period_type enum: '1d' (daily), '1w' (weekly), '1m' (monthly)."
+        ),
         annotations=annotations,
     )
     def trading_rsi(
@@ -129,7 +141,11 @@ def create_server() -> FastMCP:
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
         period_type: Annotated[
-            str, Field("1d", description="Data interval: 1d, 1w, 1m")
+            PeriodType,
+            Field(
+                "1d",
+                description="Data interval enum. Allowed values: '1d', '1w', '1m'.",
+            ),
         ] = "1d",
         start_date: Annotated[
             str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
@@ -175,7 +191,10 @@ def create_server() -> FastMCP:
         )
 
     @mcp.tool(
-        description="Return moving average values with pagination metadata.",
+        description=(
+            "Return moving average values with pagination metadata. "
+            "period_type enum: '1d' (daily), '1w' (weekly), '1m' (monthly)."
+        ),
         annotations=annotations,
     )
     def trading_ma(
@@ -198,7 +217,11 @@ def create_server() -> FastMCP:
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
         period_type: Annotated[
-            str, Field("1d", description="Data interval: 1d, 1w, 1m")
+            PeriodType,
+            Field(
+                "1d",
+                description="Data interval enum. Allowed values: '1d', '1w', '1m'.",
+            ),
         ] = "1d",
         start_date: Annotated[
             str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
@@ -245,7 +268,10 @@ def create_server() -> FastMCP:
         )
 
     @mcp.tool(
-        description="Return MACD values with pagination metadata.",
+        description=(
+            "Return MACD values with pagination metadata. "
+            "period_type enum: '1d' (daily), '1w' (weekly), '1m' (monthly)."
+        ),
         annotations=annotations,
     )
     def trading_macd(
@@ -273,7 +299,11 @@ def create_server() -> FastMCP:
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
         period_type: Annotated[
-            str, Field("1d", description="Data interval: 1d, 1w, 1m")
+            PeriodType,
+            Field(
+                "1d",
+                description="Data interval enum. Allowed values: '1d', '1w', '1m'.",
+            ),
         ] = "1d",
         start_date: Annotated[
             str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
@@ -335,6 +365,8 @@ def create_server() -> FastMCP:
             "- trading_ma(symbol, limit, period=20, ma_type='sma', offset=0, period_type='1d', "
             "start_date=None, end_date=None, response_format='markdown'): "
             "return moving average values.\n"
+            "period_type allowed values: '1d' | '1w' | '1m'. "
+            "Use exact enum value, not 'daily/weekly/monthly'.\n"
             "Inputs require a positive limit and a non-empty symbol. "
             "US symbols: AAPL.US, AAPL, or 105.AAPL."
         )
