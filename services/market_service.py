@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 import re
-from typing import Iterable, Sequence, SupportsFloat, TypeVar, cast
+from typing import Any, Iterable, Sequence, SupportsFloat, TypeVar, cast
 
 import pandas as pd
 from pandas.api.types import is_scalar
@@ -10,6 +10,12 @@ from pandas.api.types import is_scalar
 from data.client import MarketDataClient, MarketDataError
 from indicators import IndicatorEngine
 from models.mcp_tools import (
+    FundamentalCnIndicatorsRequest,
+    FundamentalCnIndicatorsResponse,
+    FundamentalUsIndicatorsRequest,
+    FundamentalUsIndicatorsResponse,
+    FundamentalUsReportRequest,
+    FundamentalUsReportResponse,
     KlineBar,
     KlineRequest,
     KlineResponse,
@@ -35,6 +41,18 @@ _CLOSE_COLUMNS = ("close", "收盘")
 _VOLUME_COLUMNS = ("volume", "vol", "成交量")
 _AMOUNT_COLUMNS = ("amount", "成交额")
 _TURNOVER_RATE_COLUMNS = ("turnover_rate", "换手率")
+_FUNDAMENTAL_DATE_COLUMNS = (
+    "REPORT_DATE",
+    "STD_REPORT_DATE",
+    "FINANCIAL_DATE",
+    "NOTICE_DATE",
+    "date",
+    "日期",
+    "交易日期",
+    "trade_date",
+    "datetime",
+    "time",
+)
 
 _US_CODE_PATTERN = re.compile(r"^\d{3}\.[A-Z0-9.-]+$")
 _US_SUFFIX = ".US"
@@ -88,6 +106,93 @@ def _round_optional_float(value: float | None, *, ndigits: int = 3) -> float | N
     if value is None:
         return None
     return round(value, ndigits)
+
+
+def _coerce_filter_date(value: str | None) -> pd.Timestamp | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    if "-" in cleaned:
+        cleaned = cleaned.replace("-", "")
+    return pd.to_datetime(cleaned, format="%Y%m%d", errors="coerce")
+
+
+def _find_fundamental_date_column(columns: Iterable[str]) -> str | None:
+    for name in _FUNDAMENTAL_DATE_COLUMNS:
+        if name in columns:
+            return name
+    return None
+
+
+def _normalize_fundamental_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame is None or frame.empty:
+        return frame
+
+    date_col = _find_fundamental_date_column(frame.columns)
+    if date_col is None:
+        return frame.reset_index(drop=True)
+
+    normalized = frame.copy()
+    normalized[date_col] = pd.to_datetime(normalized[date_col], errors="coerce")
+    normalized = normalized.sort_values(date_col).reset_index(drop=True)
+    return normalized
+
+
+def _filter_fundamental_frame_by_dates(
+    frame: pd.DataFrame,
+    start_date: str | None,
+    end_date: str | None,
+) -> pd.DataFrame:
+    if frame is None or frame.empty:
+        return frame
+
+    start_ts = _coerce_filter_date(start_date)
+    end_ts = _coerce_filter_date(end_date)
+    if start_ts is None and end_ts is None:
+        return frame
+
+    date_col = _find_fundamental_date_column(frame.columns)
+    if date_col is None:
+        return frame
+
+    dates = pd.to_datetime(frame[date_col], errors="coerce")
+    mask = pd.Series(True, index=frame.index)
+    if start_ts is not None:
+        mask &= dates >= start_ts
+    if end_ts is not None:
+        mask &= dates <= end_ts
+    return frame.loc[mask]
+
+
+def _to_json_friendly_value(value: object) -> Any:
+    if _is_missing(value):
+        return None
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if hasattr(value, "item"):
+        try:
+            return value.item()  # type: ignore[no-any-return]
+        except Exception:
+            return value
+    return value
+
+
+def build_fundamental_records(frame: pd.DataFrame) -> tuple[list[str], list[dict[str, Any]]]:
+    if frame is None or frame.empty:
+        return [], []
+
+    columns = [str(col) for col in frame.columns]
+    records: list[dict[str, Any]] = []
+    for _, row in frame.iterrows():
+        record: dict[str, Any] = {}
+        for column in frame.columns:
+            record[str(column)] = _to_json_friendly_value(row[column])
+        records.append(record)
+    return columns, records
 
 
 def _extract_timestamps(frame: pd.DataFrame) -> pd.Series:
@@ -489,4 +594,96 @@ class MarketService:
             volume_unit=volume_unit,
             amount_unit=amount_unit,
             turnover_rate_unit="percent",
+        )
+
+    def fundamental_cn_indicators(
+        self, request: FundamentalCnIndicatorsRequest
+    ) -> FundamentalCnIndicatorsResponse:
+        frame = self._client.fetch_cn_financial_indicators(
+            request.symbol,
+            request.indicator,
+        )
+        filtered = _filter_fundamental_frame_by_dates(
+            frame, request.start_date, request.end_date
+        )
+        normalized = _normalize_fundamental_frame(filtered)
+        columns, records = build_fundamental_records(normalized)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return FundamentalCnIndicatorsResponse(
+            symbol=request.symbol,
+            indicator=request.indicator,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+            start_date=request.start_date,
+            end_date=request.end_date,
+        )
+
+    def fundamental_us_report(
+        self, request: FundamentalUsReportRequest
+    ) -> FundamentalUsReportResponse:
+        frame = self._client.fetch_us_financial_report(
+            request.stock,
+            request.symbol,
+            request.indicator,
+        )
+        filtered = _filter_fundamental_frame_by_dates(
+            frame, request.start_date, request.end_date
+        )
+        normalized = _normalize_fundamental_frame(filtered)
+        columns, records = build_fundamental_records(normalized)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return FundamentalUsReportResponse(
+            stock=request.stock,
+            symbol=request.symbol,
+            indicator=request.indicator,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+            start_date=request.start_date,
+            end_date=request.end_date,
+        )
+
+    def fundamental_us_indicators(
+        self, request: FundamentalUsIndicatorsRequest
+    ) -> FundamentalUsIndicatorsResponse:
+        frame = self._client.fetch_us_financial_indicators(
+            request.symbol,
+            request.indicator,
+        )
+        filtered = _filter_fundamental_frame_by_dates(
+            frame, request.start_date, request.end_date
+        )
+        normalized = _normalize_fundamental_frame(filtered)
+        columns, records = build_fundamental_records(normalized)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return FundamentalUsIndicatorsResponse(
+            symbol=request.symbol,
+            indicator=request.indicator,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+            start_date=request.start_date,
+            end_date=request.end_date,
         )

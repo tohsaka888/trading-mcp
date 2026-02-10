@@ -26,3 +26,31 @@ class MarketDataClient(Protocol):
         """Return time-ordered data for a symbol and date range."""
 
         raise NotImplementedError
+
+    def fetch_cn_financial_indicators(
+        self,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        """Return A-share financial indicator records."""
+
+        raise NotImplementedError
+
+    def fetch_us_financial_report(
+        self,
+        stock: str,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        """Return US financial report records."""
+
+        raise NotImplementedError
+
+    def fetch_us_financial_indicators(
+        self,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        """Return US financial indicator records."""
+
+        raise NotImplementedError

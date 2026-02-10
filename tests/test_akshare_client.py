@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from data import akshare_client
+from data.client import MarketDataError
 
 
 def test_fetch_falls_back_to_tencent_with_normalized_symbol(monkeypatch) -> None:
@@ -270,3 +272,88 @@ def test_fetch_us_resamples_monthly_from_daily(monkeypatch) -> None:
     assert frame["volume"].tolist() == [300, 700]
     assert frame["amount"].tolist() == [3000, 7000]
     assert "turnover_rate" not in frame.columns
+
+
+def test_fetch_cn_financial_indicators_normalizes_symbol(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_cn_indicators(*, symbol: str, indicator: str):
+        calls["symbol"] = symbol
+        calls["indicator"] = indicator
+        return pd.DataFrame({"REPORT_DATE": ["2024-12-31"], "ROE": [12.3]})
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_financial_analysis_indicator_em",
+        fake_cn_indicators,
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_cn_financial_indicators("000001", "按报告期")
+
+    assert calls["symbol"] == "000001.SZ"
+    assert calls["indicator"] == "按报告期"
+    assert not frame.empty
+
+
+def test_fetch_cn_financial_indicators_rejects_bj_symbol() -> None:
+    client = akshare_client.AkshareMarketDataClient()
+    with pytest.raises(MarketDataError):
+        client.fetch_cn_financial_indicators("830799.BJ", "按报告期")
+
+
+def test_fetch_us_financial_report_normalizes_stock(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_us_report(*, stock: str, symbol: str, indicator: str):
+        calls["stock"] = stock
+        calls["symbol"] = symbol
+        calls["indicator"] = indicator
+        return pd.DataFrame({"REPORT_DATE": ["2024-12-31"], "AMOUNT": [100.0]})
+
+    monkeypatch.setattr(akshare_client.ak, "stock_financial_us_report_em", fake_us_report)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_us_financial_report("BRK.B", "资产负债表", "年报")
+
+    assert calls["stock"] == "BRK_B"
+    assert calls["symbol"] == "资产负债表"
+    assert calls["indicator"] == "年报"
+    assert not frame.empty
+
+
+def test_fetch_us_financial_indicators_normalizes_symbol(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_us_indicators(*, symbol: str, indicator: str):
+        calls["symbol"] = symbol
+        calls["indicator"] = indicator
+        return pd.DataFrame({"REPORT_DATE": ["2024-12-31"], "ROE": [10.2]})
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_financial_us_analysis_indicator_em",
+        fake_us_indicators,
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_us_financial_indicators("105.AAPL", "年报")
+
+    assert calls["symbol"] == "AAPL"
+    assert calls["indicator"] == "年报"
+    assert not frame.empty
+
+
+def test_fetch_us_financial_indicators_wraps_errors(monkeypatch) -> None:
+    def fake_us_indicators(*, symbol: str, indicator: str):
+        raise TypeError("mock failure")
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_financial_us_analysis_indicator_em",
+        fake_us_indicators,
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    with pytest.raises(MarketDataError):
+        client.fetch_us_financial_indicators("TSLA", "年报")
