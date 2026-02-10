@@ -57,7 +57,7 @@ class ToolRequest(DateRangeRequest):
 
 
 class KlineRequest(ToolRequest):
-    pass
+    limit: int = Field(30, ge=1, description="Number of recent data points to return")
 
 
 class RsiRequest(ToolRequest):

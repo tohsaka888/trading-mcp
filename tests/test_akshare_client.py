@@ -41,6 +41,44 @@ def test_fetch_falls_back_to_tencent_with_normalized_symbol(monkeypatch) -> None
     assert not frame.empty
 
 
+def test_fetch_falls_back_to_tencent_without_dates(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
+        calls["hist"] = symbol
+        raise RuntimeError("primary source failed")
+
+    def fake_hist_tx(
+        *, symbol: str, start_date: str, end_date: str, adjust: str
+    ):
+        calls["hist_tx"] = symbol
+        calls["start_date"] = start_date
+        calls["end_date"] = end_date
+        return pd.DataFrame(
+            {
+                "date": ["2024-01-01"],
+                "open": [1.0],
+                "high": [1.0],
+                "low": [1.0],
+                "close": [1.0],
+            }
+        )
+
+    monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
+    monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist_tx", fake_hist_tx)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch("000001")
+
+    assert calls["hist"] == "000001"
+    assert calls["hist_tx"] == "sz000001"
+    assert len(calls["start_date"]) == 8
+    assert len(calls["end_date"]) == 8
+    assert not frame.empty
+
+
 def test_fetch_us_symbol_maps_to_eastmoney_hist(monkeypatch) -> None:
     calls: dict[str, str] = {}
 
