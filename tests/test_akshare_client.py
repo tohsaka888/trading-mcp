@@ -32,6 +32,11 @@ def test_fetch_falls_back_to_tencent_with_normalized_symbol(monkeypatch) -> None
 
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist_tx", fake_hist_tx)
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_cn_tx_extended",
+        lambda self, symbol, start_date, end_date: pd.DataFrame(),
+    )
 
     client = akshare_client.AkshareMarketDataClient()
     frame = client.fetch("300308.SZ", "2024-01-01", "2024-01-10")
@@ -68,6 +73,11 @@ def test_fetch_falls_back_to_tencent_without_dates(monkeypatch) -> None:
 
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist_tx", fake_hist_tx)
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_cn_tx_extended",
+        lambda self, symbol, start_date, end_date: pd.DataFrame(),
+    )
 
     client = akshare_client.AkshareMarketDataClient()
     frame = client.fetch("000001")
@@ -77,6 +87,88 @@ def test_fetch_falls_back_to_tencent_without_dates(monkeypatch) -> None:
     assert len(calls["start_date"]) == 8
     assert len(calls["end_date"]) == 8
     assert not frame.empty
+
+
+def test_fetch_cn_tencent_legacy_amount_maps_to_volume(monkeypatch) -> None:
+    def fake_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
+        return pd.DataFrame()
+
+    def fake_hist_tx(
+        *, symbol: str, start_date: str, end_date: str, adjust: str
+    ):
+        return pd.DataFrame(
+            {
+                "date": ["2024-01-01"],
+                "open": [1.0],
+                "high": [1.1],
+                "low": [0.9],
+                "close": [1.0],
+                "amount": [12345.0],
+            }
+        )
+
+    monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
+    monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist_tx", fake_hist_tx)
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_cn_tx_extended",
+        lambda self, symbol, start_date, end_date: pd.DataFrame(),
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch("000001", "2024-01-01", "2024-01-10")
+
+    assert frame["volume"].tolist() == [12345.0]
+    assert "amount" not in frame.columns
+
+
+def test_fetch_cn_prefers_extended_tencent_frame(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
+        return pd.DataFrame()
+
+    def fake_hist_tx(
+        *, symbol: str, start_date: str, end_date: str, adjust: str
+    ):
+        calls["hist_tx"] = symbol
+        return pd.DataFrame()
+
+    def fake_extended(self, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
+        calls["extended"] = symbol
+        return pd.DataFrame(
+            {
+                "date": ["2024-01-01"],
+                "open": [1.0],
+                "high": [1.1],
+                "low": [0.9],
+                "close": [1.0],
+                "volume": [1000.0],
+                "amount": [1000000.0],
+                "turnover_rate": [0.4],
+            }
+        )
+
+    monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
+    monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist_tx", fake_hist_tx)
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_cn_tx_extended",
+        fake_extended,
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch("000001", "2024-01-01", "2024-01-10")
+
+    assert calls["extended"] == "sz000001"
+    assert "hist_tx" not in calls
+    assert frame["volume"].tolist() == [1000.0]
+    assert frame["amount"].tolist() == [1000000.0]
+    assert frame["turnover_rate"].tolist() == [0.4]
 
 
 def test_fetch_us_symbol_maps_to_eastmoney_hist(monkeypatch) -> None:
@@ -263,7 +355,7 @@ def test_fetch_us_resamples_weekly_from_daily(monkeypatch) -> None:
     assert frame["close"].tolist() == [5.1, 10.1]
     assert frame["volume"].tolist() == [500, 1000]
     assert frame["amount"].tolist() == [5000, 10000]
-    assert "turnover_rate" not in frame.columns
+    assert frame["turnover_rate"].tolist() == pytest.approx([0.5, 0.5])
 
 
 def test_fetch_us_resamples_monthly_from_daily(monkeypatch) -> None:
@@ -309,7 +401,7 @@ def test_fetch_us_resamples_monthly_from_daily(monkeypatch) -> None:
     assert frame["close"].tolist() == [11.5, 13.5]
     assert frame["volume"].tolist() == [300, 700]
     assert frame["amount"].tolist() == [3000, 7000]
-    assert "turnover_rate" not in frame.columns
+    assert frame["turnover_rate"].tolist() == pytest.approx([0.5, 0.9])
 
 
 def test_fetch_cn_financial_indicators_normalizes_symbol(monkeypatch) -> None:

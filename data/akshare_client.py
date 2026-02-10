@@ -6,6 +6,7 @@ import time
 from typing import Iterable
 
 import akshare as ak
+import requests
 import pandas as pd
 
 from .client import DateLike, MarketDataError
@@ -18,12 +19,16 @@ _LOW_COLUMNS = ("low", "最低")
 _CLOSE_COLUMNS = ("close", "收盘")
 _VOLUME_COLUMNS = ("volume", "vol", "成交量")
 _AMOUNT_COLUMNS = ("amount", "成交额")
+_TURNOVER_RATE_COLUMNS = ("turnover_rate", "换手率")
 _US_CODE_PATTERN = re.compile(r"^\d{3}\.[A-Z0-9.-]+$")
 _US_SUFFIX = ".US"
 _US_TICKER_PATTERN = re.compile(r"^[A-Z][A-Z.-]*$")
 _US_FUNDAMENTAL_TICKER_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 _US_EXCHANGE_SUFFIXES = (".NYSE", ".NASDAQ", ".AMEX")
 _US_CACHE_TTL_SECONDS = 24 * 60 * 60
+_TX_KLINE_URL = "https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get"
+_TX_AMOUNT_SCALE = 10000.0
+_TX_TIMEOUT_SECONDS = 10.0
 
 
 def _to_ak_date(value: DateLike | None) -> str | None:
@@ -251,6 +256,7 @@ def _resample_ohlcv(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
     close_col = _find_column(indexed.columns, _CLOSE_COLUMNS)
     volume_col = _find_column(indexed.columns, _VOLUME_COLUMNS)
     amount_col = _find_column(indexed.columns, _AMOUNT_COLUMNS)
+    turnover_rate_col = _find_column(indexed.columns, _TURNOVER_RATE_COLUMNS)
 
     missing = [
         name
@@ -275,6 +281,8 @@ def _resample_ohlcv(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
         agg[volume_col] = "sum"
     if amount_col is not None:
         agg[amount_col] = "sum"
+    if turnover_rate_col is not None:
+        agg[turnover_rate_col] = "sum"
 
     resampled = (
         indexed.resample(rule, label="right", closed="right")
@@ -292,6 +300,8 @@ def _resample_ohlcv(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
         rename_map[volume_col] = "volume"
     if amount_col is not None:
         rename_map[amount_col] = "amount"
+    if turnover_rate_col is not None:
+        rename_map[turnover_rate_col] = "turnover_rate"
 
     resampled = resampled.rename(columns=rename_map)
     index_name = resampled.index.name or "index"
@@ -306,6 +316,107 @@ class AkshareMarketDataClient:
         self._adjust = adjust or ""
         self._us_symbol_cache: dict[str, list[str]] | None = None
         self._us_symbol_cache_at: float | None = None
+
+    def _fetch_cn_tx_extended(
+        self,
+        symbol: str,
+        start_date: str,
+        end_date: str,
+    ) -> pd.DataFrame:
+        try:
+            from akshare.stock_feature import stock_hist_tx
+        except Exception:
+            return pd.DataFrame()
+
+        resolved_start = start_date.replace("-", "")
+        resolved_end = end_date.replace("-", "")
+        try:
+            init_start = str(stock_hist_tx.get_tx_start_year(symbol=symbol)).replace("-", "")
+            if int(resolved_start) < int(init_start):
+                resolved_start = init_start
+        except Exception:
+            pass
+
+        try:
+            range_start = int(resolved_start[:4])
+            range_end = int(resolved_end[:4]) + 1
+        except (TypeError, ValueError):
+            return pd.DataFrame()
+
+        upper_year = min(range_end, date.today().year + 1)
+        chunks: list[pd.DataFrame] = []
+        for year in range(range_start, upper_year):
+            params = {
+                "_var": f"kline_day{self._adjust}{year}",
+                "param": f"{symbol},day,{year}-01-01,{year + 1}-12-31,640,{self._adjust}",
+                "r": "0.8205512681390605",
+            }
+            try:
+                response = requests.get(
+                    _TX_KLINE_URL,
+                    params=params,
+                    timeout=_TX_TIMEOUT_SECONDS,
+                )
+                text = response.text
+                payload_start = text.find("={")
+                if payload_start < 0:
+                    continue
+                parsed = stock_hist_tx.demjson.decode(text[payload_start + 1 :])
+                raw_symbol = parsed["data"][symbol]
+                if "day" in raw_symbol:
+                    raw_rows = raw_symbol["day"]
+                elif "hfqday" in raw_symbol:
+                    raw_rows = raw_symbol["hfqday"]
+                else:
+                    raw_rows = raw_symbol.get("qfqday", [])
+            except Exception:
+                continue
+
+            chunk = pd.DataFrame(raw_rows)
+            if chunk.empty:
+                continue
+            chunks.append(chunk)
+
+        if not chunks:
+            return pd.DataFrame()
+
+        raw = pd.concat(chunks, ignore_index=True)
+        if raw.empty or raw.shape[1] < 6:
+            return pd.DataFrame()
+
+        frame = pd.DataFrame(
+            {
+                "date": pd.to_datetime(raw.iloc[:, 0], errors="coerce"),
+                "open": pd.to_numeric(raw.iloc[:, 1], errors="coerce"),
+                "close": pd.to_numeric(raw.iloc[:, 2], errors="coerce"),
+                "high": pd.to_numeric(raw.iloc[:, 3], errors="coerce"),
+                "low": pd.to_numeric(raw.iloc[:, 4], errors="coerce"),
+                "volume": pd.to_numeric(raw.iloc[:, 5], errors="coerce"),
+            }
+        )
+        if raw.shape[1] > 7:
+            frame["turnover_rate"] = pd.to_numeric(raw.iloc[:, 7], errors="coerce")
+        if raw.shape[1] > 8:
+            # Tencent field index 8 is transaction amount in 10k CNY.
+            frame["amount"] = (
+                pd.to_numeric(raw.iloc[:, 8], errors="coerce") * _TX_AMOUNT_SCALE
+            )
+
+        frame = frame.dropna(subset=["date"]).drop_duplicates(subset=["date"])
+        frame = frame.sort_values("date")
+        filtered = _filter_frame_by_dates(frame, resolved_start, resolved_end)
+        return filtered.reset_index(drop=True)
+
+    @staticmethod
+    def _normalize_cn_tx_legacy(frame: pd.DataFrame) -> pd.DataFrame:
+        if frame is None or frame.empty:
+            return frame
+
+        normalized = frame.copy()
+        volume_col = _find_column(normalized.columns, _VOLUME_COLUMNS)
+        if volume_col is None and "amount" in normalized.columns:
+            normalized = normalized.rename(columns={"amount": "volume"})
+        return normalized
 
     def _get_us_symbol_map(self) -> dict[str, list[str]]:
         now = time.time()
@@ -558,13 +669,21 @@ class AkshareMarketDataClient:
         fallback_frame: pd.DataFrame | None = None
         if exchange is not None:
             tx_start_date, tx_end_date = _resolve_tx_date_range(start_date, end_date)
+            tx_symbol = f"{exchange}{normalized_symbol}"
+            fallback_frame = self._fetch_cn_tx_extended(
+                tx_symbol,
+                tx_start_date,
+                tx_end_date,
+            )
             try:
-                fallback_frame = ak.stock_zh_a_hist_tx(
-                    symbol=f"{exchange}{normalized_symbol}",
-                    start_date=tx_start_date,
-                    end_date=tx_end_date,
-                    adjust=self._adjust,
-                )
+                if fallback_frame is None or fallback_frame.empty:
+                    fallback_frame = ak.stock_zh_a_hist_tx(
+                        symbol=tx_symbol,
+                        start_date=tx_start_date,
+                        end_date=tx_end_date,
+                        adjust=self._adjust,
+                    )
+                    fallback_frame = self._normalize_cn_tx_legacy(fallback_frame)
             except Exception:
                 fallback_frame = None
 
