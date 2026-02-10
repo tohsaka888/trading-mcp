@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import re
 from typing import Iterable, Sequence, SupportsFloat, TypeVar, cast
 
 import pandas as pd
@@ -21,6 +22,9 @@ from models.mcp_tools import (
     RsiPoint,
     RsiRequest,
     RsiResponse,
+    VolumePoint,
+    VolumeRequest,
+    VolumeResponse,
 )
 
 _DATE_COLUMNS = ("date", "日期", "交易日期", "trade_date", "datetime", "time")
@@ -29,6 +33,13 @@ _HIGH_COLUMNS = ("high", "最高")
 _LOW_COLUMNS = ("low", "最低")
 _CLOSE_COLUMNS = ("close", "收盘")
 _VOLUME_COLUMNS = ("volume", "vol", "成交量")
+_AMOUNT_COLUMNS = ("amount", "成交额")
+_TURNOVER_RATE_COLUMNS = ("turnover_rate", "换手率")
+
+_US_CODE_PATTERN = re.compile(r"^\d{3}\.[A-Z0-9.-]+$")
+_US_SUFFIX = ".US"
+_US_TICKER_PATTERN = re.compile(r"^[A-Z][A-Z.-]*$")
+_US_EXCHANGE_SUFFIXES = (".NYSE", ".NASDAQ", ".AMEX")
 
 
 def _find_column(columns: Iterable[str], candidates: Iterable[str]) -> str | None:
@@ -102,6 +113,19 @@ def _extract_close_series(frame: pd.DataFrame) -> pd.Series:
     if isinstance(series, pd.Series):
         return series
     return series.iloc[:, 0]
+
+
+def _is_us_symbol(symbol: str) -> bool:
+    upper = symbol.strip().upper()
+    if not upper:
+        return False
+    if upper.endswith(_US_EXCHANGE_SUFFIXES):
+        return False
+    return (
+        bool(_US_CODE_PATTERN.match(upper))
+        or upper.endswith(_US_SUFFIX)
+        or bool(_US_TICKER_PATTERN.match(upper))
+    )
 
 
 T = TypeVar("T")
@@ -204,6 +228,41 @@ def build_macd_points(timestamps: pd.Series, values: pd.DataFrame) -> list[MacdP
         )
         for ts, (_, row) in zip(timestamps, values.iterrows(), strict=True)
     ]
+    return points
+
+
+def build_volume_points(frame: pd.DataFrame) -> list[VolumePoint]:
+    if frame is None or frame.empty:
+        return []
+
+    timestamps = _extract_timestamps(frame)
+    volume_col = _find_column(frame.columns, _VOLUME_COLUMNS)
+    amount_col = _find_column(frame.columns, _AMOUNT_COLUMNS)
+    turnover_rate_col = _find_column(frame.columns, _TURNOVER_RATE_COLUMNS)
+
+    points: list[VolumePoint] = []
+    for idx in range(len(frame)):
+        points.append(
+            VolumePoint(
+                timestamp=_coerce_timestamp(timestamps.iloc[idx]),
+                volume=(
+                    _coerce_optional_float(frame[volume_col].iloc[idx])
+                    if volume_col is not None
+                    else None
+                ),
+                amount=(
+                    _coerce_optional_float(frame[amount_col].iloc[idx])
+                    if amount_col is not None
+                    else None
+                ),
+                turnover_rate=(
+                    _coerce_optional_float(frame[turnover_rate_col].iloc[idx])
+                    if turnover_rate_col is not None
+                    else None
+                ),
+            )
+        )
+
     return points
 
 
@@ -375,4 +434,59 @@ class MarketService:
             period_type=request.period_type,
             start_date=request.start_date,
             end_date=request.end_date,
+        )
+
+    def volume(self, request: VolumeRequest) -> VolumeResponse:
+        frame = self._client.fetch(
+            request.symbol,
+            request.start_date,
+            request.end_date,
+            period_type=request.period_type,
+        )
+        is_us = _is_us_symbol(request.symbol)
+        volume_unit = "share" if is_us else "lot"
+        default_amount_unit = "USD" if is_us else "CNY"
+
+        if frame is None or frame.empty:
+            return VolumeResponse(
+                symbol=request.symbol,
+                items=[],
+                count=0,
+                total=0,
+                limit=request.limit,
+                offset=request.offset,
+                has_more=False,
+                next_offset=None,
+                period_type=request.period_type,
+                start_date=request.start_date,
+                end_date=request.end_date,
+                volume_unit=volume_unit,
+                amount_unit=default_amount_unit,
+                turnover_rate_unit="percent",
+            )
+
+        amount_unit = (
+            default_amount_unit
+            if _find_column(frame.columns, _AMOUNT_COLUMNS) is not None
+            else None
+        )
+        points = build_volume_points(frame)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            points, request.limit, request.offset
+        )
+        return VolumeResponse(
+            symbol=request.symbol,
+            items=items,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+            period_type=request.period_type,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            volume_unit=volume_unit,
+            amount_unit=amount_unit,
+            turnover_rate_unit="percent",
         )

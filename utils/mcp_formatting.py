@@ -3,7 +3,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterable
 
-from models.mcp_tools import KlineResponse, MacdResponse, MaResponse, RsiResponse
+from models.mcp_tools import (
+    KlineResponse,
+    MacdResponse,
+    MaResponse,
+    RsiResponse,
+    VolumeResponse,
+)
 
 
 def _fmt_value(value: object) -> str:
@@ -108,4 +114,21 @@ def format_macd_response(response: MacdResponse) -> str:
         for item in response.items
     ]
     lines.extend(_format_table(["timestamp", "macd", "signal", "histogram"], rows))
+    return "\n".join(lines)
+
+
+def format_volume_response(response: VolumeResponse) -> str:
+    lines = _format_header("trading_volume", response)
+    lines.append(
+        "Units: "
+        f"volume={response.volume_unit}, "
+        f"amount={response.amount_unit or '-'}, "
+        f"turnover_rate={response.turnover_rate_unit}"
+    )
+    lines.append("")
+    rows = [
+        (item.timestamp, item.volume, item.amount, item.turnover_rate)
+        for item in response.items
+    ]
+    lines.extend(_format_table(["timestamp", "volume", "amount", "turnover_rate"], rows))
     return "\n".join(lines)

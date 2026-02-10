@@ -7,6 +7,8 @@ from .mcp_tools import (
     MaRequest,
     RsiPoint,
     RsiRequest,
+    VolumePoint,
+    VolumeRequest,
 )
 
 __all__ = [
@@ -18,4 +20,6 @@ __all__ = [
     "MaRequest",
     "RsiPoint",
     "RsiRequest",
+    "VolumePoint",
+    "VolumeRequest",
 ]

@@ -17,6 +17,7 @@ _HIGH_COLUMNS = ("high", "最高")
 _LOW_COLUMNS = ("low", "最低")
 _CLOSE_COLUMNS = ("close", "收盘")
 _VOLUME_COLUMNS = ("volume", "vol", "成交量")
+_AMOUNT_COLUMNS = ("amount", "成交额")
 _US_CODE_PATTERN = re.compile(r"^\d{3}\.[A-Z0-9.-]+$")
 _US_SUFFIX = ".US"
 _US_TICKER_PATTERN = re.compile(r"^[A-Z][A-Z.-]*$")
@@ -203,6 +204,7 @@ def _resample_ohlcv(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
     low_col = _find_column(indexed.columns, _LOW_COLUMNS)
     close_col = _find_column(indexed.columns, _CLOSE_COLUMNS)
     volume_col = _find_column(indexed.columns, _VOLUME_COLUMNS)
+    amount_col = _find_column(indexed.columns, _AMOUNT_COLUMNS)
 
     missing = [
         name
@@ -225,6 +227,8 @@ def _resample_ohlcv(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
     }
     if volume_col is not None:
         agg[volume_col] = "sum"
+    if amount_col is not None:
+        agg[amount_col] = "sum"
 
     resampled = (
         indexed.resample(rule, label="right", closed="right")
@@ -240,6 +244,8 @@ def _resample_ohlcv(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
     }
     if volume_col is not None:
         rename_map[volume_col] = "volume"
+    if amount_col is not None:
+        rename_map[amount_col] = "amount"
 
     resampled = resampled.rename(columns=rename_map)
     index_name = resampled.index.name or "index"
