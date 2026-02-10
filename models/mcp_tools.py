@@ -134,6 +134,23 @@ class MacdPoint(BaseModel):
         return value.isoformat()
 
 
+class VolumeRequest(ToolRequest):
+    pass
+
+
+class VolumePoint(BaseModel):
+    timestamp: datetime
+    volume: float | None = None
+    amount: float | None = None
+    turnover_rate: float | None = None
+
+    @field_serializer("timestamp", when_used="json")
+    def _serialize_timestamp(self, value: datetime) -> str:
+        if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+            return value.replace(tzinfo=timezone.utc).isoformat()
+        return value.isoformat()
+
+
 class ToolResponse(BaseModel):
     symbol: str = Field(..., min_length=1, description="Market symbol identifier")
     count: int = Field(..., ge=0, description="Number of items in this response")
@@ -163,3 +180,10 @@ class MaResponse(ToolResponse):
 
 class MacdResponse(ToolResponse):
     items: list[MacdPoint] = Field(default_factory=list)
+
+
+class VolumeResponse(ToolResponse):
+    items: list[VolumePoint] = Field(default_factory=list)
+    volume_unit: str = Field(..., description="Volume unit: lot or share")
+    amount_unit: str | None = Field(None, description="Amount unit: CNY, USD or null")
+    turnover_rate_unit: str = Field(..., description="Turnover rate unit: percent")

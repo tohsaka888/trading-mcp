@@ -201,6 +201,8 @@ def test_fetch_us_resamples_weekly_from_daily(monkeypatch) -> None:
                 "low": [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5],
                 "close": [1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1],
                 "volume": [100, 100, 100, 100, 100, 200, 200, 200, 200, 200],
+                "amount": [1000, 1000, 1000, 1000, 1000, 2000, 2000, 2000, 2000, 2000],
+                "turnover_rate": [0.1] * 10,
             }
         )
 
@@ -220,6 +222,8 @@ def test_fetch_us_resamples_weekly_from_daily(monkeypatch) -> None:
     assert frame["low"].tolist() == [0.5, 5.5]
     assert frame["close"].tolist() == [5.1, 10.1]
     assert frame["volume"].tolist() == [500, 1000]
+    assert frame["amount"].tolist() == [5000, 10000]
+    assert "turnover_rate" not in frame.columns
 
 
 def test_fetch_us_resamples_monthly_from_daily(monkeypatch) -> None:
@@ -243,6 +247,8 @@ def test_fetch_us_resamples_monthly_from_daily(monkeypatch) -> None:
                 "low": [9, 10, 11, 12],
                 "close": [10.5, 11.5, 12.5, 13.5],
                 "volume": [100, 200, 300, 400],
+                "amount": [1000, 2000, 3000, 4000],
+                "turnover_rate": [0.2, 0.3, 0.4, 0.5],
             }
         )
 
@@ -262,3 +268,5 @@ def test_fetch_us_resamples_monthly_from_daily(monkeypatch) -> None:
     assert frame["low"].tolist() == [9, 11]
     assert frame["close"].tolist() == [11.5, 13.5]
     assert frame["volume"].tolist() == [300, 700]
+    assert frame["amount"].tolist() == [3000, 7000]
+    assert "turnover_rate" not in frame.columns

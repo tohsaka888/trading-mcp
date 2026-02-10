@@ -3,7 +3,15 @@ from pydantic import ValidationError
 
 from datetime import datetime
 
-from models.mcp_tools import KlineBar, KlineRequest, MacdRequest, MaRequest, RsiRequest
+from models.mcp_tools import (
+    KlineBar,
+    KlineRequest,
+    MacdRequest,
+    MaRequest,
+    RsiRequest,
+    VolumePoint,
+    VolumeRequest,
+)
 
 
 def test_kline_limit_validation() -> None:
@@ -62,4 +70,21 @@ def test_timestamp_json_includes_timezone() -> None:
         close=1.0,
     )
     payload = bar.model_dump(mode="json")
+    assert payload["timestamp"].endswith("+00:00")
+
+
+def test_volume_request_defaults() -> None:
+    request = VolumeRequest(symbol="000001", limit=5)
+    assert request.offset == 0
+    assert request.period_type == "1d"
+
+
+def test_volume_request_invalid_limit() -> None:
+    with pytest.raises(ValidationError):
+        VolumeRequest(symbol="000001", limit=0)
+
+
+def test_volume_point_timestamp_json_includes_timezone() -> None:
+    point = VolumePoint(timestamp=datetime(2024, 1, 1, 0, 0, 0), volume=100.0)
+    payload = point.model_dump(mode="json")
     assert payload["timestamp"].endswith("+00:00")

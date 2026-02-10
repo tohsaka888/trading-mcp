@@ -85,6 +85,15 @@ python main.py
 - `trading_macd(symbol, limit, fast_period=12, slow_period=26, signal_period=9, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_rsi(symbol, limit, period=14, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_ma(symbol, limit, period=20, ma_type="sma", offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_volume(symbol, limit, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+
+`trading_volume` 字段说明：
+- 返回字段：`timestamp`、`volume`、`amount`、`turnover_rate`
+- 单位策略：保留数据源原始单位，并通过响应字段返回单位
+  - A 股：`volume_unit=lot`，`amount_unit=CNY`
+  - 美股：`volume_unit=share`，`amount_unit=USD`
+  - `turnover_rate_unit=percent`
+- 当周/月是由日线聚合而来时，`turnover_rate` 可能为 `null`
 
 符号说明：
 - A 股示例：`000001`、`300308.SZ`

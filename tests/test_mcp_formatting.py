@@ -11,12 +11,15 @@ from models.mcp_tools import (
     MaResponse,
     RsiPoint,
     RsiResponse,
+    VolumePoint,
+    VolumeResponse,
 )
 from utils.mcp_formatting import (
     format_kline_response,
     format_macd_response,
     format_ma_response,
     format_rsi_response,
+    format_volume_response,
 )
 
 
@@ -114,3 +117,33 @@ def test_format_macd_response_contains_table() -> None:
     assert "# trading_macd" in text
     assert "Period: `1d`" in text
     assert "| timestamp | macd | signal | histogram |" in text
+
+
+def test_format_volume_response_contains_table_and_units() -> None:
+    response = VolumeResponse(
+        symbol="AAPL.US",
+        items=[
+            VolumePoint(
+                timestamp=datetime(2024, 1, 1),
+                volume=1000.0,
+                amount=100000.0,
+                turnover_rate=0.53,
+            )
+        ],
+        count=1,
+        total=1,
+        limit=1,
+        offset=0,
+        has_more=False,
+        next_offset=None,
+        period_type="1d",
+        start_date=None,
+        end_date=None,
+        volume_unit="share",
+        amount_unit="USD",
+        turnover_rate_unit="percent",
+    )
+    text = format_volume_response(response)
+    assert "# trading_volume" in text
+    assert "Units: volume=share, amount=USD, turnover_rate=percent" in text
+    assert "| timestamp | volume | amount | turnover_rate |" in text

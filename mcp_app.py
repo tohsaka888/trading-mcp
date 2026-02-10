@@ -21,6 +21,8 @@ from models.mcp_tools import (
     MaResponse,
     RsiRequest,
     RsiResponse,
+    VolumeRequest,
+    VolumeResponse,
 )
 from services.market_service import MarketService
 from utils.mcp_formatting import (
@@ -28,6 +30,7 @@ from utils.mcp_formatting import (
     format_macd_response,
     format_ma_response,
     format_rsi_response,
+    format_volume_response,
 )
 
 PeriodType = Literal["1d", "1w", "1m"]
@@ -112,6 +115,77 @@ def create_server() -> FastMCP:
             text = json.dumps(structured, indent=2, ensure_ascii=False)
         else:
             text = format_kline_response(response)
+        return CallToolResult(
+            content=[TextContent(type="text", text=text)],
+            structuredContent=structured,
+        )
+
+    @mcp.tool(
+        description=(
+            "Return volume, amount, and turnover rate values with pagination metadata. "
+            "period_type enum: '1d' (daily), '1w' (weekly), '1m' (monthly)."
+        ),
+        annotations=annotations,
+    )
+    def trading_volume(
+        symbol: Annotated[
+            str,
+            Field(
+                ...,
+                min_length=1,
+                description="Market symbol identifier (e.g. 000001, AAPL.US, AAPL)",
+            ),
+        ],
+        limit: Annotated[
+            int, Field(..., ge=1, description="Number of recent data points to return")
+        ],
+        offset: Annotated[
+            int, Field(0, ge=0, description="Number of most recent points to skip")
+        ] = 0,
+        period_type: Annotated[
+            PeriodType,
+            Field(
+                "1d",
+                description="Data interval enum. Allowed values: '1d', '1w', '1m'.",
+            ),
+        ] = "1d",
+        start_date: Annotated[
+            str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
+        ] = None,
+        end_date: Annotated[
+            str | None, Field(None, description="End date (YYYY-MM-DD or YYYYMMDD)")
+        ] = None,
+        response_format: Annotated[
+            Literal["markdown", "json"],
+            Field("markdown", description="Response format"),
+        ] = "markdown",
+    ) -> Annotated[CallToolResult, VolumeResponse]:
+        request = VolumeRequest(
+            symbol=symbol,
+            limit=limit,
+            offset=offset,
+            period_type=period_type,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        try:
+            response = service.volume(request)
+        except (MarketDataError, IndicatorError) as exc:
+            return CallToolResult(
+                content=[
+                    TextContent(
+                        type="text",
+                        text=f"Error: {exc}. Check the symbol and date range.",
+                    )
+                ],
+                isError=True,
+            )
+
+        structured = response.model_dump(mode="json", by_alias=True)
+        if response_format == "json":
+            text = json.dumps(structured, indent=2, ensure_ascii=False)
+        else:
+            text = format_volume_response(response)
         return CallToolResult(
             content=[TextContent(type="text", text=text)],
             structuredContent=structured,
@@ -360,6 +434,9 @@ def create_server() -> FastMCP:
             "offset=0, period_type='1d', start_date=None, end_date=None, "
             "response_format='markdown'): "
             "return MACD, signal, histogram values.\n"
+            "- trading_volume(symbol, limit, offset=0, period_type='1d', start_date=None, "
+            "end_date=None, response_format='markdown'): "
+            "return volume, amount, turnover_rate values.\n"
             "- trading_rsi(symbol, limit, period=14, offset=0, period_type='1d', start_date=None, "
             "end_date=None, response_format='markdown'): return RSI values.\n"
             "- trading_ma(symbol, limit, period=20, ma_type='sma', offset=0, period_type='1d', "
@@ -381,6 +458,10 @@ def create_server() -> FastMCP:
             "trading_macd": {
                 "description": "MACD indicator values",
                 "fields": ["timestamp", "macd", "signal", "histogram"],
+            },
+            "trading_volume": {
+                "description": "Volume, amount, and turnover rate values",
+                "fields": ["timestamp", "volume", "amount", "turnover_rate"],
             },
             "trading_rsi": {
                 "description": "Relative Strength Index values",

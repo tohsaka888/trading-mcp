@@ -4,7 +4,13 @@ from datetime import datetime
 
 import pandas as pd
 
-from models.mcp_tools import KlineRequest, MacdRequest, MaRequest, RsiRequest
+from models.mcp_tools import (
+    KlineRequest,
+    MacdRequest,
+    MaRequest,
+    RsiRequest,
+    VolumeRequest,
+)
 from services.market_service import MarketService
 
 
@@ -28,6 +34,8 @@ class FakeClient:
                 "low": [9, 10, 11],
                 "close": [10.5, 11.5, 12.5],
                 "volume": [1000, 1100, 1200],
+                "amount": [10000, 11000, 12000],
+                "turnover_rate": [0.1, 0.2, 0.3],
             }
         )
 
@@ -110,3 +118,41 @@ def test_pagination_offset_beyond_total() -> None:
     assert response.items == []
     assert response.period_type == "1d"
     assert client.last_period_type == "1d"
+
+
+def test_volume_points_limit_and_units() -> None:
+    client = FakeClient()
+    service = MarketService(client, FakeEngine())
+    response = service.volume(VolumeRequest(symbol="AAPL.US", limit=2))
+
+    assert response.count == 2
+    assert response.total == 3
+    assert len(response.items) == 2
+    assert response.items[0].timestamp == datetime(2024, 1, 2)
+    assert response.items[0].volume == 1100.0
+    assert response.volume_unit == "share"
+    assert response.amount_unit == "USD"
+    assert response.turnover_rate_unit == "percent"
+    assert response.period_type == "1d"
+    assert client.last_period_type == "1d"
+
+
+def test_volume_missing_amount_turnover_defaults_none() -> None:
+    class MissingFieldsClient(FakeClient):
+        def fetch(self, symbol: str, start=None, end=None, period_type: str = "1d"):
+            self.last_period_type = period_type
+            return pd.DataFrame(
+                {
+                    "date": ["2024-01-01", "2024-01-02"],
+                    "volume": [1000, 1100],
+                }
+            )
+
+    client = MissingFieldsClient()
+    service = MarketService(client, FakeEngine())
+    response = service.volume(VolumeRequest(symbol="AAPL", limit=2))
+
+    assert response.count == 2
+    assert response.amount_unit is None
+    assert response.items[0].amount is None
+    assert response.items[0].turnover_rate is None
