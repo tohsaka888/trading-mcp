@@ -31,3 +31,7 @@
   - `python main.py`
 - MCP 工具概览：
   - `trading_kline` / `trading_rsi` / `trading_ma` / `trading_macd`（支持 offset 与日期范围分页，响应带结构化元数据）
+
+## 编码说明
+
+每次编写完成代码之后需要执行 `ruff` 进行代码格式化和检查。需要执行 `ty` 进行lint检查。

@@ -81,6 +81,34 @@ print(result.tail())
 python main.py
 ```
 
+启动 MCP Inspector（适配 WSL，可从宿主机访问）：
+
+```bash
+./dev.sh
+```
+
+默认会使用以下 Inspector 配置：
+- `MCP_INSPECTOR_HOST=0.0.0.0`
+- `MCP_INSPECTOR_CLIENT_PORT=6274`
+- `MCP_INSPECTOR_SERVER_PORT=6277`
+- `MCP_INSPECTOR_AUTO_OPEN=false`
+
+在 Windows 宿主机浏览器中优先访问：
+
+```text
+http://localhost:6274
+```
+
+如本机未启用 WSL `localhost` 转发，也可以先在 WSL 内执行 `hostname -I` 查看 IP，再从宿主机访问 `http://<wsl-ip>:6274`。
+
+如果你只想本机 Linux 环境访问，可覆盖为：
+
+```bash
+MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
+```
+
+注意：Inspector 代理具备启动本地进程的能力。`0.0.0.0` 仅应在受信任网络环境中使用。
+
 可用工具：
 - `trading_kline(symbol, limit=30, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_macd(symbol, limit, fast_period=12, slow_period=26, signal_period=9, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
