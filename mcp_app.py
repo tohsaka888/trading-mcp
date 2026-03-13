@@ -833,7 +833,8 @@ def create_server() -> FastMCP:
     @mcp.tool(
         description=(
             "Return EM industry board historical K-line records with pagination metadata. "
-            "period enum: '日k', '周k', '月k'; adjust enum: '', 'qfq', 'hfq'."
+            "period enum: '日k', '周k', '月k'; adjust enum: 'none', 'qfq', 'hfq'. "
+            "'none' means no price adjustment."
         ),
         annotations=annotations,
     )
@@ -847,9 +848,9 @@ def create_server() -> FastMCP:
             Field("日k", description="K-line period"),
         ] = "日k",
         adjust: Annotated[
-            Literal["", "qfq", "hfq"],
-            Field("", description="Adjust type"),
-        ] = "",
+            Literal["none", "qfq", "hfq"],
+            Field("none", description="Adjust type; use 'none' for no adjustment"),
+        ] = "none",
         limit: Annotated[
             int, Field(200, ge=1, description="Number of recent records to return")
         ] = 200,
@@ -870,7 +871,7 @@ def create_server() -> FastMCP:
         request = IndustryHistEmRequest(
             symbol=symbol,
             period=period,
-            adjust=adjust,
+            adjust="" if adjust == "none" else adjust,
             limit=limit,
             offset=offset,
             start_date=start_date,
@@ -962,7 +963,7 @@ def create_server() -> FastMCP:
             "return EM industry board spot records.\n"
             "- trading_industry_cons_em(symbol, limit=200, offset=0, response_format='markdown'): "
             "return EM industry board constituent records.\n"
-            "- trading_industry_hist_em(symbol, period='日k', adjust='', limit=200, offset=0, "
+            "- trading_industry_hist_em(symbol, period='日k', adjust='none', limit=200, offset=0, "
             "start_date=None, end_date=None, response_format='markdown'): "
             "return EM industry historical K-line records.\n"
             "- trading_industry_hist_min_em(symbol, period='5', limit=200, offset=0, "
@@ -970,7 +971,7 @@ def create_server() -> FastMCP:
             "period_type allowed values: '1d' | '1w' | '1m'. "
             "Use exact enum value, not 'daily/weekly/monthly'.\n"
             "Industry hist period values: '日k' | '周k' | '月k'; "
-            "adjust values: '' | 'qfq' | 'hfq'; minute period values: "
+            "adjust values: 'none' | 'qfq' | 'hfq'; minute period values: "
             "'1' | '5' | '15' | '30' | '60'.\n"
             "Inputs require a positive limit and a non-empty symbol. "
             "US symbols: AAPL.US, AAPL, 105.AAPL, BRK.B."

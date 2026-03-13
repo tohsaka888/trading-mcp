@@ -123,7 +123,7 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_industry_name_em(limit=200, offset=0, response_format="markdown")`
 - `trading_industry_spot_em(symbol, limit=200, offset=0, response_format="markdown")`
 - `trading_industry_cons_em(symbol, limit=200, offset=0, response_format="markdown")`
-- `trading_industry_hist_em(symbol, period="日k", adjust="", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_industry_hist_em(symbol, period="日k", adjust="none", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
 - `trading_industry_hist_min_em(symbol, period="5", limit=200, offset=0, response_format="markdown")`
 
 `trading_fundamental_cn_indicators` 参数说明：
@@ -161,7 +161,7 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_industry_cons_em`：东方财富行业板块成份股，`symbol` 为板块名
 - `trading_industry_hist_em`：东方财富行业板块历史行情
   - `period` 枚举：`日k`、`周k`、`月k`
-  - `adjust` 枚举：`""`、`qfq`、`hfq`
+  - `adjust` 枚举：`none`、`qfq`、`hfq`；其中 `none` 表示不复权
 - `trading_industry_hist_min_em`：东方财富行业板块分时历史行情
   - `period` 枚举：`1`、`5`、`15`、`30`、`60`
 - 行业板块结果统一按原始表格返回：`columns + items`
