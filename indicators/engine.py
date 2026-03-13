@@ -61,7 +61,7 @@ class IndicatorEngine:
         series: Sequence[float] | pd.Series,
         *,
         timeperiod: int = 20,
-        matype: int = 0,
+        matype: talib.MA_Type = talib.MA_Type.SMA,
     ) -> pd.Series:
         values = _to_numpy(series)
         output = talib.MA(values, timeperiod=timeperiod, matype=matype)

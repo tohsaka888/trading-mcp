@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from datetime import date, datetime
 import re
-from typing import Any, Iterable, Sequence, SupportsFloat, TypeVar, cast
+from typing import Any, Iterable, Protocol, Sequence, SupportsFloat, TypeVar, cast
 
 import pandas as pd
 from pandas.api.types import is_scalar
+import talib
 
 from data.client import MarketDataClient, MarketDataError
-from indicators import IndicatorEngine
 from models.mcp_tools import (
     FundamentalCnIndicatorsRequest,
     FundamentalCnIndicatorsResponse,
@@ -16,6 +16,20 @@ from models.mcp_tools import (
     FundamentalUsIndicatorsResponse,
     FundamentalUsReportRequest,
     FundamentalUsReportResponse,
+    IndustryConsEmRequest,
+    IndustryConsEmResponse,
+    IndustryHistEmRequest,
+    IndustryHistEmResponse,
+    IndustryHistMinEmRequest,
+    IndustryHistMinEmResponse,
+    IndustryIndexThsRequest,
+    IndustryIndexThsResponse,
+    IndustryNameEmRequest,
+    IndustryNameEmResponse,
+    IndustrySpotEmRequest,
+    IndustrySpotEmResponse,
+    IndustrySummaryThsRequest,
+    IndustrySummaryThsResponse,
     KlineBar,
     KlineRequest,
     KlineResponse,
@@ -195,6 +209,17 @@ def build_fundamental_records(frame: pd.DataFrame) -> tuple[list[str], list[dict
     return columns, records
 
 
+def _build_table_records(
+    frame: pd.DataFrame,
+    *,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> tuple[list[str], list[dict[str, Any]]]:
+    filtered = _filter_fundamental_frame_by_dates(frame, start_date, end_date)
+    normalized = _normalize_fundamental_frame(filtered)
+    return build_fundamental_records(normalized)
+
+
 def _extract_timestamps(frame: pd.DataFrame) -> pd.Series:
     date_col = _find_column(frame.columns, _DATE_COLUMNS)
     if date_col is None:
@@ -234,6 +259,29 @@ def _is_us_symbol(symbol: str) -> bool:
 
 
 T = TypeVar("T")
+
+
+class IndicatorCalculator(Protocol):
+    def compute(
+        self, name: str, series: Sequence[float] | pd.Series, **kwargs: object
+    ) -> pd.Series: ...
+
+    def compute_ma(
+        self,
+        series: Sequence[float] | pd.Series,
+        *,
+        timeperiod: int = 20,
+        matype: talib.MA_Type = talib.MA_Type.SMA,
+    ) -> pd.Series: ...
+
+    def compute_macd(
+        self,
+        series: Sequence[float] | pd.Series,
+        *,
+        fastperiod: int = 12,
+        slowperiod: int = 26,
+        signalperiod: int = 9,
+    ) -> pd.DataFrame: ...
 
 
 def _paginate_latest(
@@ -372,7 +420,7 @@ def build_volume_points(frame: pd.DataFrame) -> list[VolumePoint]:
 
 
 class MarketService:
-    def __init__(self, client: MarketDataClient, engine: IndicatorEngine) -> None:
+    def __init__(self, client: MarketDataClient, engine: IndicatorCalculator) -> None:
         self._client = client
         self._engine = engine
 
@@ -596,6 +644,161 @@ class MarketService:
             turnover_rate_unit="percent",
         )
 
+    def industry_summary_ths(
+        self, request: IndustrySummaryThsRequest
+    ) -> IndustrySummaryThsResponse:
+        frame = self._client.fetch_industry_summary_ths()
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return IndustrySummaryThsResponse(
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
+    def industry_index_ths(
+        self, request: IndustryIndexThsRequest
+    ) -> IndustryIndexThsResponse:
+        frame = self._client.fetch_industry_index_ths(
+            request.symbol,
+            request.start_date,
+            request.end_date,
+        )
+        columns, records = _build_table_records(
+            frame,
+            start_date=request.start_date,
+            end_date=request.end_date,
+        )
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return IndustryIndexThsResponse(
+            symbol=request.symbol,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+            start_date=request.start_date,
+            end_date=request.end_date,
+        )
+
+    def industry_name_em(self, request: IndustryNameEmRequest) -> IndustryNameEmResponse:
+        frame = self._client.fetch_industry_name_em()
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return IndustryNameEmResponse(
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
+    def industry_spot_em(self, request: IndustrySpotEmRequest) -> IndustrySpotEmResponse:
+        frame = self._client.fetch_industry_spot_em(request.symbol)
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return IndustrySpotEmResponse(
+            symbol=request.symbol,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
+    def industry_cons_em(self, request: IndustryConsEmRequest) -> IndustryConsEmResponse:
+        frame = self._client.fetch_industry_cons_em(request.symbol)
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return IndustryConsEmResponse(
+            symbol=request.symbol,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
+    def industry_hist_em(self, request: IndustryHistEmRequest) -> IndustryHistEmResponse:
+        frame = self._client.fetch_industry_hist_em(
+            request.symbol,
+            request.start_date,
+            request.end_date,
+            request.period,
+            request.adjust,
+        )
+        columns, records = _build_table_records(
+            frame,
+            start_date=request.start_date,
+            end_date=request.end_date,
+        )
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return IndustryHistEmResponse(
+            symbol=request.symbol,
+            period=request.period,
+            adjust=request.adjust,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+            start_date=request.start_date,
+            end_date=request.end_date,
+        )
+
+    def industry_hist_min_em(
+        self, request: IndustryHistMinEmRequest
+    ) -> IndustryHistMinEmResponse:
+        frame = self._client.fetch_industry_hist_min_em(request.symbol, request.period)
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return IndustryHistMinEmResponse(
+            symbol=request.symbol,
+            period=request.period,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
     def fundamental_cn_indicators(
         self, request: FundamentalCnIndicatorsRequest
     ) -> FundamentalCnIndicatorsResponse:
@@ -603,11 +806,11 @@ class MarketService:
             request.symbol,
             request.indicator,
         )
-        filtered = _filter_fundamental_frame_by_dates(
-            frame, request.start_date, request.end_date
+        columns, records = _build_table_records(
+            frame,
+            start_date=request.start_date,
+            end_date=request.end_date,
         )
-        normalized = _normalize_fundamental_frame(filtered)
-        columns, records = build_fundamental_records(normalized)
         items, total, count, has_more, next_offset = _paginate_latest(
             records, request.limit, request.offset
         )
@@ -634,11 +837,11 @@ class MarketService:
             request.symbol,
             request.indicator,
         )
-        filtered = _filter_fundamental_frame_by_dates(
-            frame, request.start_date, request.end_date
+        columns, records = _build_table_records(
+            frame,
+            start_date=request.start_date,
+            end_date=request.end_date,
         )
-        normalized = _normalize_fundamental_frame(filtered)
-        columns, records = build_fundamental_records(normalized)
         items, total, count, has_more, next_offset = _paginate_latest(
             records, request.limit, request.offset
         )
@@ -665,11 +868,11 @@ class MarketService:
             request.symbol,
             request.indicator,
         )
-        filtered = _filter_fundamental_frame_by_dates(
-            frame, request.start_date, request.end_date
+        columns, records = _build_table_records(
+            frame,
+            start_date=request.start_date,
+            end_date=request.end_date,
         )
-        normalized = _normalize_fundamental_frame(filtered)
-        columns, records = build_fundamental_records(normalized)
         items, total, count, has_more, next_offset = _paginate_latest(
             records, request.limit, request.offset
         )

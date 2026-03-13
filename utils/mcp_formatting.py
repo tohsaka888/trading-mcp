@@ -7,10 +7,18 @@ from models.mcp_tools import (
     FundamentalCnIndicatorsResponse,
     FundamentalUsIndicatorsResponse,
     FundamentalUsReportResponse,
+    IndustryConsEmResponse,
+    IndustryHistEmResponse,
+    IndustryHistMinEmResponse,
+    IndustryIndexThsResponse,
+    IndustryNameEmResponse,
+    IndustrySpotEmResponse,
+    IndustrySummaryThsResponse,
     KlineResponse,
     MacdResponse,
     MaResponse,
     RsiResponse,
+    TableResponse,
     VolumeResponse,
 )
 
@@ -30,7 +38,7 @@ def _fmt_indicator(value: object) -> str:
     if value is None:
         return "-"
     try:
-        return f"{float(value):.3f}"
+        return f"{float(str(value)):.3f}"
     except (TypeError, ValueError):
         return str(value)
 
@@ -140,7 +148,7 @@ def format_volume_response(response: VolumeResponse) -> str:
     return "\n".join(lines)
 
 
-def _format_fundamental_preview(
+def _format_table_preview(
     columns: list[str], items: list[dict[str, object]]
 ) -> list[str]:
     if not columns:
@@ -172,74 +180,120 @@ def _format_fundamental_preview(
     return lines
 
 
+def format_table_response(
+    tool_name: str,
+    response: TableResponse,
+    metadata: list[str] | None = None,
+) -> str:
+    lines = [f"# {tool_name}"]
+    if metadata:
+        lines.extend(metadata)
+    lines.append(
+        " | ".join(
+            [
+                f"Limit: {response.limit}",
+                f"Offset: {response.offset}",
+                f"Count: {response.count}",
+                f"Total: {response.total}",
+            ]
+        )
+    )
+    lines.append(f"Has more: {response.has_more} | Next offset: {response.next_offset}")
+    start_date = getattr(response, "start_date", None)
+    end_date = getattr(response, "end_date", None)
+    if start_date is not None or end_date is not None:
+        lines.append(f"Date range: {start_date or '-'} to {end_date or '-'}")
+    lines.append("")
+    lines.extend(_format_table_preview(response.columns, response.items))
+    return "\n".join(lines)
+
+
 def format_fundamental_cn_indicators_response(
     response: FundamentalCnIndicatorsResponse,
 ) -> str:
-    lines = [f"# trading_fundamental_cn_indicators"]
-    lines.append(f"Symbol: `{response.symbol}`")
-    lines.append(f"Indicator: `{response.indicator}`")
-    lines.append(
-        " | ".join(
-            [
-                f"Limit: {response.limit}",
-                f"Offset: {response.offset}",
-                f"Count: {response.count}",
-                f"Total: {response.total}",
-            ]
-        )
+    return format_table_response(
+        "trading_fundamental_cn_indicators",
+        response,
+        metadata=[
+            f"Symbol: `{response.symbol}`",
+            f"Indicator: `{response.indicator}`",
+        ],
     )
-    lines.append(f"Has more: {response.has_more} | Next offset: {response.next_offset}")
-    lines.append(
-        f"Date range: {response.start_date or '-'} to {response.end_date or '-'}"
-    )
-    lines.append("")
-    lines.extend(_format_fundamental_preview(response.columns, response.items))
-    return "\n".join(lines)
 
 
 def format_fundamental_us_report_response(response: FundamentalUsReportResponse) -> str:
-    lines = [f"# trading_fundamental_us_report"]
-    lines.append(f"Stock: `{response.stock}`")
-    lines.append(f"Report: `{response.symbol}` | Indicator: `{response.indicator}`")
-    lines.append(
-        " | ".join(
-            [
-                f"Limit: {response.limit}",
-                f"Offset: {response.offset}",
-                f"Count: {response.count}",
-                f"Total: {response.total}",
-            ]
-        )
+    return format_table_response(
+        "trading_fundamental_us_report",
+        response,
+        metadata=[
+            f"Stock: `{response.stock}`",
+            f"Report: `{response.symbol}` | Indicator: `{response.indicator}`",
+        ],
     )
-    lines.append(f"Has more: {response.has_more} | Next offset: {response.next_offset}")
-    lines.append(
-        f"Date range: {response.start_date or '-'} to {response.end_date or '-'}"
-    )
-    lines.append("")
-    lines.extend(_format_fundamental_preview(response.columns, response.items))
-    return "\n".join(lines)
 
 
 def format_fundamental_us_indicators_response(
     response: FundamentalUsIndicatorsResponse,
 ) -> str:
-    lines = [f"# trading_fundamental_us_indicators"]
-    lines.append(f"Symbol: `{response.symbol}`")
-    lines.append(f"Indicator: `{response.indicator}`")
-    lines.append(
-        " | ".join(
-            [
-                f"Limit: {response.limit}",
-                f"Offset: {response.offset}",
-                f"Count: {response.count}",
-                f"Total: {response.total}",
-            ]
-        )
+    return format_table_response(
+        "trading_fundamental_us_indicators",
+        response,
+        metadata=[
+            f"Symbol: `{response.symbol}`",
+            f"Indicator: `{response.indicator}`",
+        ],
     )
-    lines.append(f"Has more: {response.has_more} | Next offset: {response.next_offset}")
-    lines.append(
-        f"Date range: {response.start_date or '-'} to {response.end_date or '-'}"
+
+
+def format_industry_summary_ths_response(response: IndustrySummaryThsResponse) -> str:
+    return format_table_response("trading_industry_summary_ths", response)
+
+
+def format_industry_index_ths_response(response: IndustryIndexThsResponse) -> str:
+    return format_table_response(
+        "trading_industry_index_ths",
+        response,
+        metadata=[f"Symbol: `{response.symbol}`"],
     )
-    lines.append("")
-    lines.extend(_format_fundamental_preview(response.columns, response.items))
-    return "\n".join(lines)
+
+
+def format_industry_name_em_response(response: IndustryNameEmResponse) -> str:
+    return format_table_response("trading_industry_name_em", response)
+
+
+def format_industry_spot_em_response(response: IndustrySpotEmResponse) -> str:
+    return format_table_response(
+        "trading_industry_spot_em",
+        response,
+        metadata=[f"Symbol: `{response.symbol}`"],
+    )
+
+
+def format_industry_cons_em_response(response: IndustryConsEmResponse) -> str:
+    return format_table_response(
+        "trading_industry_cons_em",
+        response,
+        metadata=[f"Symbol: `{response.symbol}`"],
+    )
+
+
+def format_industry_hist_em_response(response: IndustryHistEmResponse) -> str:
+    return format_table_response(
+        "trading_industry_hist_em",
+        response,
+        metadata=[
+            f"Symbol: `{response.symbol}`",
+            f"Period: `{response.period}` | Adjust: `{response.adjust or 'none'}`",
+        ],
+    )
+
+
+def format_industry_hist_min_em_response(response: IndustryHistMinEmResponse) -> str:
+    return format_table_response(
+        "trading_industry_hist_min_em",
+        response,
+        metadata=[
+            f"Symbol: `{response.symbol}`",
+            f"Period: `{response.period}`",
+        ],
+    )

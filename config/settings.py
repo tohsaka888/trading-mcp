@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TypedDict, Unpack
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -21,7 +22,13 @@ class Settings(BaseSettings):
     )
 
 
-def load_settings(**overrides: object) -> Settings:
+class SettingsOverrides(TypedDict, total=False):
+    environment: str
+    data_dir: Path
+    default_symbol: str
+
+
+def load_settings(**overrides: Unpack[SettingsOverrides]) -> Settings:
     """Load settings with optional overrides (env vars still apply)."""
 
     return Settings(**overrides)

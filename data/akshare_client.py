@@ -607,6 +607,111 @@ class AkshareMarketDataClient:
             return pd.DataFrame()
         return frame
 
+    def fetch_industry_summary_ths(self) -> pd.DataFrame:
+        try:
+            frame = ak.stock_board_industry_summary_ths()
+        except Exception as exc:
+            raise MarketDataError("Akshare THS industry summary fetch failed") from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
+    def fetch_industry_index_ths(
+        self,
+        symbol: str,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+    ) -> pd.DataFrame:
+        try:
+            frame = ak.stock_board_industry_index_ths(
+                symbol=symbol.strip(),
+                start_date=_to_ak_date(start_date) or "",
+                end_date=_to_ak_date(end_date) or "",
+            )
+        except Exception as exc:
+            raise MarketDataError(
+                "Akshare THS industry index fetch failed "
+                f"for symbol={symbol}, start_date={start_date}, end_date={end_date}"
+            ) from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
+    def fetch_industry_name_em(self) -> pd.DataFrame:
+        try:
+            frame = ak.stock_board_industry_name_em()
+        except Exception as exc:
+            raise MarketDataError("Akshare EM industry names fetch failed") from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
+    def fetch_industry_spot_em(self, symbol: str) -> pd.DataFrame:
+        try:
+            frame = ak.stock_board_industry_spot_em(symbol=symbol.strip())
+        except Exception as exc:
+            raise MarketDataError(
+                f"Akshare EM industry spot fetch failed for symbol={symbol}"
+            ) from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
+    def fetch_industry_cons_em(self, symbol: str) -> pd.DataFrame:
+        try:
+            frame = ak.stock_board_industry_cons_em(symbol=symbol.strip())
+        except Exception as exc:
+            raise MarketDataError(
+                f"Akshare EM industry constituents fetch failed for symbol={symbol}"
+            ) from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
+    def fetch_industry_hist_em(
+        self,
+        symbol: str,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+        period: str = "日k",
+        adjust: str = "",
+    ) -> pd.DataFrame:
+        try:
+            frame = ak.stock_board_industry_hist_em(
+                symbol=symbol.strip(),
+                start_date=_to_ak_date(start_date) or "",
+                end_date=_to_ak_date(end_date) or "",
+                period=period,
+                adjust=adjust,
+            )
+        except Exception as exc:
+            raise MarketDataError(
+                "Akshare EM industry history fetch failed "
+                f"for symbol={symbol}, period={period}, adjust={adjust}"
+            ) from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
+    def fetch_industry_hist_min_em(
+        self,
+        symbol: str,
+        period: str = "5",
+    ) -> pd.DataFrame:
+        try:
+            frame = ak.stock_board_industry_hist_min_em(
+                symbol=symbol.strip(),
+                period=period,
+            )
+        except Exception as exc:
+            raise MarketDataError(
+                "Akshare EM industry intraday history fetch failed "
+                f"for symbol={symbol}, period={period}"
+            ) from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
     def fetch(
         self,
         symbol: str,

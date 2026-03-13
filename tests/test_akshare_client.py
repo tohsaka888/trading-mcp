@@ -487,3 +487,153 @@ def test_fetch_us_financial_indicators_wraps_errors(monkeypatch) -> None:
     client = akshare_client.AkshareMarketDataClient()
     with pytest.raises(MarketDataError):
         client.fetch_us_financial_indicators("TSLA", "年报")
+
+
+def test_fetch_industry_summary_ths(monkeypatch) -> None:
+    def fake_summary():
+        return pd.DataFrame({"板块": ["元件"]})
+
+    monkeypatch.setattr(
+        akshare_client.ak, "stock_board_industry_summary_ths", fake_summary
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_industry_summary_ths()
+
+    assert frame["板块"].tolist() == ["元件"]
+
+
+def test_fetch_industry_index_ths_normalizes_dates(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_index(*, symbol: str, start_date: str, end_date: str):
+        calls["symbol"] = symbol
+        calls["start_date"] = start_date
+        calls["end_date"] = end_date
+        return pd.DataFrame({"日期": ["2024-01-01"]})
+
+    monkeypatch.setattr(
+        akshare_client.ak, "stock_board_industry_index_ths", fake_index
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_industry_index_ths("元件", "2024-01-01", "2024-01-31")
+
+    assert calls == {
+        "symbol": "元件",
+        "start_date": "20240101",
+        "end_date": "20240131",
+    }
+    assert not frame.empty
+
+
+def test_fetch_industry_name_em(monkeypatch) -> None:
+    def fake_name():
+        return pd.DataFrame({"板块名称": ["小金属"]})
+
+    monkeypatch.setattr(akshare_client.ak, "stock_board_industry_name_em", fake_name)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_industry_name_em()
+
+    assert frame["板块名称"].tolist() == ["小金属"]
+
+
+def test_fetch_industry_spot_em(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_spot(*, symbol: str):
+        calls["symbol"] = symbol
+        return pd.DataFrame({"最新": [1.0]})
+
+    monkeypatch.setattr(akshare_client.ak, "stock_board_industry_spot_em", fake_spot)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_industry_spot_em("小金属")
+
+    assert calls["symbol"] == "小金属"
+    assert frame["最新"].tolist() == [1.0]
+
+
+def test_fetch_industry_cons_em(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_cons(*, symbol: str):
+        calls["symbol"] = symbol
+        return pd.DataFrame({"代码": ["000001"]})
+
+    monkeypatch.setattr(akshare_client.ak, "stock_board_industry_cons_em", fake_cons)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_industry_cons_em("小金属")
+
+    assert calls["symbol"] == "小金属"
+    assert frame["代码"].tolist() == ["000001"]
+
+
+def test_fetch_industry_hist_em(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_hist(
+        *, symbol: str, start_date: str, end_date: str, period: str, adjust: str
+    ):
+        calls["symbol"] = symbol
+        calls["start_date"] = start_date
+        calls["end_date"] = end_date
+        calls["period"] = period
+        calls["adjust"] = adjust
+        return pd.DataFrame({"日期": ["2024-01-01"]})
+
+    monkeypatch.setattr(akshare_client.ak, "stock_board_industry_hist_em", fake_hist)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_industry_hist_em(
+        "小金属",
+        "2024-01-01",
+        "2024-01-31",
+        period="周k",
+        adjust="qfq",
+    )
+
+    assert calls == {
+        "symbol": "小金属",
+        "start_date": "20240101",
+        "end_date": "20240131",
+        "period": "周k",
+        "adjust": "qfq",
+    }
+    assert not frame.empty
+
+
+def test_fetch_industry_hist_min_em(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_hist_min(*, symbol: str, period: str):
+        calls["symbol"] = symbol
+        calls["period"] = period
+        return pd.DataFrame({"时间": ["09:35"]})
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_board_industry_hist_min_em",
+        fake_hist_min,
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_industry_hist_min_em("小金属", period="15")
+
+    assert calls == {"symbol": "小金属", "period": "15"}
+    assert frame["时间"].tolist() == ["09:35"]
+
+
+def test_fetch_industry_summary_ths_wraps_error(monkeypatch) -> None:
+    def fake_summary():
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(
+        akshare_client.ak, "stock_board_industry_summary_ths", fake_summary
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    with pytest.raises(MarketDataError):
+        client.fetch_industry_summary_ths()

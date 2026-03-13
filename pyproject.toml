@@ -11,6 +11,20 @@ default = true
 [tool.pytest.ini_options]
 pythonpath = ["."]
 
+[tool.ty.src]
+include = [
+    "config",
+    "data",
+    "indicators",
+    "models",
+    "services",
+    "tests",
+    "utils",
+    "main.py",
+    "mcp_app.py",
+]
+exclude = [".agents/**"]
+
 
 [project]
 name = "trading-mcp"

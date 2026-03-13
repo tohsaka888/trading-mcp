@@ -54,3 +54,54 @@ class MarketDataClient(Protocol):
         """Return US financial indicator records."""
 
         raise NotImplementedError
+
+    def fetch_industry_summary_ths(self) -> pd.DataFrame:
+        """Return THS industry board summary records."""
+
+        raise NotImplementedError
+
+    def fetch_industry_index_ths(
+        self,
+        symbol: str,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+    ) -> pd.DataFrame:
+        """Return THS industry board index records."""
+
+        raise NotImplementedError
+
+    def fetch_industry_name_em(self) -> pd.DataFrame:
+        """Return EM industry board name records."""
+
+        raise NotImplementedError
+
+    def fetch_industry_spot_em(self, symbol: str) -> pd.DataFrame:
+        """Return EM industry board spot records."""
+
+        raise NotImplementedError
+
+    def fetch_industry_cons_em(self, symbol: str) -> pd.DataFrame:
+        """Return EM industry board constituent records."""
+
+        raise NotImplementedError
+
+    def fetch_industry_hist_em(
+        self,
+        symbol: str,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+        period: str = "日k",
+        adjust: str = "",
+    ) -> pd.DataFrame:
+        """Return EM industry board historical K-line records."""
+
+        raise NotImplementedError
+
+    def fetch_industry_hist_min_em(
+        self,
+        symbol: str,
+        period: str = "5",
+    ) -> pd.DataFrame:
+        """Return EM industry board intraday historical records."""
+
+        raise NotImplementedError

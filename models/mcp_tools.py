@@ -21,6 +21,9 @@ _AGGREGATED_PERIOD_TYPES = {"1w", "1m"}
 _CN_FINANCIAL_INDICATORS = {"按报告期", "按单季度"}
 _US_FINANCIAL_REPORT_SYMBOLS = {"资产负债表", "综合损益表", "现金流量表"}
 _US_FINANCIAL_INDICATORS = {"年报", "单季报", "累计季报"}
+_INDUSTRY_HIST_PERIODS = {"日k", "周k", "月k"}
+_INDUSTRY_HIST_ADJUSTS = {"", "qfq", "hfq"}
+_INDUSTRY_HIST_MIN_PERIODS = {"1", "5", "15", "30", "60"}
 
 
 class DateRangeRequest(BaseModel):
@@ -159,6 +162,63 @@ class VolumeRequest(ToolRequest):
     pass
 
 
+class TableRequest(BaseModel):
+    limit: int = Field(200, ge=1, description="Number of recent records to return")
+    offset: int = Field(0, ge=0, description="Number of most recent records to skip")
+
+
+class IndustrySummaryThsRequest(TableRequest):
+    pass
+
+
+class IndustryNameEmRequest(TableRequest):
+    pass
+
+
+class IndustryIndexThsRequest(DateRangeRequest, TableRequest):
+    symbol: str = Field(..., min_length=1, description="THS industry board symbol")
+
+
+class IndustrySpotEmRequest(TableRequest):
+    symbol: str = Field(..., min_length=1, description="EM industry board symbol")
+
+
+class IndustryConsEmRequest(TableRequest):
+    symbol: str = Field(..., min_length=1, description="EM industry board symbol")
+
+
+class IndustryHistEmRequest(DateRangeRequest, TableRequest):
+    symbol: str = Field(..., min_length=1, description="EM industry board symbol")
+    period: str = Field("日k", description="K-line period: 日k, 周k, 月k")
+    adjust: str = Field("", description="Adjust type: '', qfq, hfq")
+
+    @field_validator("period")
+    @classmethod
+    def _validate_industry_hist_period(cls, value: str) -> str:
+        if value not in _INDUSTRY_HIST_PERIODS:
+            raise ValueError("period must be one of: 日k, 周k, 月k")
+        return value
+
+    @field_validator("adjust")
+    @classmethod
+    def _validate_industry_hist_adjust(cls, value: str) -> str:
+        if value not in _INDUSTRY_HIST_ADJUSTS:
+            raise ValueError("adjust must be one of: '', qfq, hfq")
+        return value
+
+
+class IndustryHistMinEmRequest(TableRequest):
+    symbol: str = Field(..., min_length=1, description="EM industry board symbol")
+    period: str = Field("5", description="Minute period: 1, 5, 15, 30, 60")
+
+    @field_validator("period")
+    @classmethod
+    def _validate_industry_hist_min_period(cls, value: str) -> str:
+        if value not in _INDUSTRY_HIST_MIN_PERIODS:
+            raise ValueError("period must be one of: 1, 5, 15, 30, 60")
+        return value
+
+
 class FundamentalCnIndicatorsRequest(DateRangeRequest):
     symbol: str = Field(..., min_length=1, description="A-share stock symbol")
     indicator: str = Field(
@@ -272,7 +332,7 @@ class VolumeResponse(ToolResponse):
     turnover_rate_unit: str = Field(..., description="Turnover rate unit: percent")
 
 
-class FundamentalResponse(BaseModel):
+class TableResponse(BaseModel):
     count: int = Field(..., ge=0, description="Number of items in this response")
     total: int = Field(..., ge=0, description="Total items available before pagination")
     limit: int = Field(..., ge=1, description="Requested page size")
@@ -285,6 +345,47 @@ class FundamentalResponse(BaseModel):
     items: list[dict[str, Any]] = Field(default_factory=list, description="Raw records")
 
     model_config = {"extra": "ignore"}
+
+
+class DatedTableResponse(TableResponse):
+    start_date: str | None = Field(None, description="Applied start date filter")
+    end_date: str | None = Field(None, description="Applied end date filter")
+
+
+class IndustrySummaryThsResponse(TableResponse):
+    pass
+
+
+class IndustryNameEmResponse(TableResponse):
+    pass
+
+
+class IndustryIndexThsResponse(DatedTableResponse):
+    symbol: str = Field(..., min_length=1, description="THS industry board symbol")
+
+
+class IndustrySpotEmResponse(TableResponse):
+    symbol: str = Field(..., min_length=1, description="EM industry board symbol")
+
+
+class IndustryConsEmResponse(TableResponse):
+    symbol: str = Field(..., min_length=1, description="EM industry board symbol")
+
+
+class IndustryHistEmResponse(DatedTableResponse):
+    symbol: str = Field(..., min_length=1, description="EM industry board symbol")
+    period: str = Field(..., description="K-line period")
+    adjust: str = Field(..., description="Adjust type")
+
+
+class IndustryHistMinEmResponse(TableResponse):
+    symbol: str = Field(..., min_length=1, description="EM industry board symbol")
+    period: str = Field(..., description="Minute period")
+
+
+class FundamentalResponse(TableResponse):
+    start_date: str | None = Field(None, description="Applied start date filter")
+    end_date: str | None = Field(None, description="Applied end date filter")
 
 
 class FundamentalCnIndicatorsResponse(FundamentalResponse):

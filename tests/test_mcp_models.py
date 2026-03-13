@@ -7,6 +7,9 @@ from models.mcp_tools import (
     FundamentalCnIndicatorsRequest,
     FundamentalUsIndicatorsRequest,
     FundamentalUsReportRequest,
+    IndustryHistEmRequest,
+    IndustryHistMinEmRequest,
+    IndustryIndexThsRequest,
     KlineBar,
     KlineRequest,
     MacdRequest,
@@ -144,3 +147,40 @@ def test_fundamental_request_date_validation() -> None:
     )
     assert request.start_date == "2024-01-01"
     assert request.end_date == "20240131"
+
+
+def test_industry_index_request_date_validation() -> None:
+    request = IndustryIndexThsRequest(
+        symbol="元件",
+        start_date="2024-01-01",
+        end_date="20240131",
+    )
+    assert request.start_date == "2024-01-01"
+    assert request.end_date == "20240131"
+
+
+def test_industry_hist_period_validation() -> None:
+    with pytest.raises(ValidationError):
+        IndustryHistEmRequest(symbol="小金属", period="季k")
+
+
+def test_industry_hist_adjust_validation() -> None:
+    with pytest.raises(ValidationError):
+        IndustryHistEmRequest(symbol="小金属", adjust="bfq")
+
+
+def test_industry_hist_min_period_validation() -> None:
+    with pytest.raises(ValidationError):
+        IndustryHistMinEmRequest(symbol="小金属", period="2")
+
+
+def test_industry_hist_defaults() -> None:
+    request = IndustryHistEmRequest(symbol="小金属")
+    assert request.period == "日k"
+    assert request.adjust == ""
+
+
+def test_industry_hist_min_defaults() -> None:
+    request = IndustryHistMinEmRequest(symbol="小金属")
+    assert request.period == "5"
+    assert request.limit == 200

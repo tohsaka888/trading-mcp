@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated, Literal
+from typing import Annotated, Any, Callable, Literal
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from config import McpServerSettings
 from data import AkshareMarketDataClient
@@ -19,6 +19,20 @@ from models.mcp_tools import (
     FundamentalUsIndicatorsResponse,
     FundamentalUsReportRequest,
     FundamentalUsReportResponse,
+    IndustryConsEmRequest,
+    IndustryConsEmResponse,
+    IndustryHistEmRequest,
+    IndustryHistEmResponse,
+    IndustryHistMinEmRequest,
+    IndustryHistMinEmResponse,
+    IndustryIndexThsRequest,
+    IndustryIndexThsResponse,
+    IndustryNameEmRequest,
+    IndustryNameEmResponse,
+    IndustrySpotEmRequest,
+    IndustrySpotEmResponse,
+    IndustrySummaryThsRequest,
+    IndustrySummaryThsResponse,
     KlineRequest,
     KlineResponse,
     MacdRequest,
@@ -35,6 +49,13 @@ from utils.mcp_formatting import (
     format_fundamental_cn_indicators_response,
     format_fundamental_us_indicators_response,
     format_fundamental_us_report_response,
+    format_industry_cons_em_response,
+    format_industry_hist_em_response,
+    format_industry_hist_min_em_response,
+    format_industry_index_ths_response,
+    format_industry_name_em_response,
+    format_industry_spot_em_response,
+    format_industry_summary_ths_response,
     format_kline_response,
     format_macd_response,
     format_ma_response,
@@ -57,6 +78,27 @@ def create_server() -> FastMCP:
         destructiveHint=False,
         openWorldHint=True,
     )
+
+    def _error_result(message: str) -> CallToolResult:
+        return CallToolResult(
+            content=[TextContent(type="text", text=message)],
+            isError=True,
+        )
+
+    def _success_result(
+        response: BaseModel,
+        response_format: Literal["markdown", "json"],
+        formatter: Callable[[Any], str],
+    ) -> CallToolResult:
+        structured = response.model_dump(mode="json", by_alias=True)
+        if response_format == "json":
+            text = json.dumps(structured, indent=2, ensure_ascii=False)
+        else:
+            text = formatter(response)
+        return CallToolResult(
+            content=[TextContent(type="text", text=text)],
+            structuredContent=structured,
+        )
 
     @mcp.tool(
         description=(
@@ -642,6 +684,247 @@ def create_server() -> FastMCP:
             structuredContent=structured,
         )
 
+    @mcp.tool(
+        description="Return THS industry board summary records with pagination metadata.",
+        annotations=annotations,
+    )
+    def trading_industry_summary_ths(
+        limit: Annotated[
+            int, Field(200, ge=1, description="Number of recent records to return")
+        ] = 200,
+        offset: Annotated[
+            int, Field(0, ge=0, description="Number of most recent records to skip")
+        ] = 0,
+        response_format: Annotated[
+            Literal["markdown", "json"],
+            Field("markdown", description="Response format"),
+        ] = "markdown",
+    ) -> Annotated[CallToolResult, IndustrySummaryThsResponse]:
+        request = IndustrySummaryThsRequest(limit=limit, offset=offset)
+        try:
+            response = service.industry_summary_ths(request)
+        except MarketDataError as exc:
+            return _error_result(f"Error: {exc}. Check the THS industry summary source.")
+        return _success_result(
+            response, response_format, format_industry_summary_ths_response
+        )
+
+    @mcp.tool(
+        description=(
+            "Return THS industry board index records with pagination metadata. "
+            "Supports start_date and end_date in YYYY-MM-DD or YYYYMMDD format."
+        ),
+        annotations=annotations,
+    )
+    def trading_industry_index_ths(
+        symbol: Annotated[
+            str,
+            Field(..., min_length=1, description="THS industry board symbol"),
+        ],
+        limit: Annotated[
+            int, Field(200, ge=1, description="Number of recent records to return")
+        ] = 200,
+        offset: Annotated[
+            int, Field(0, ge=0, description="Number of most recent records to skip")
+        ] = 0,
+        start_date: Annotated[
+            str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
+        ] = None,
+        end_date: Annotated[
+            str | None, Field(None, description="End date (YYYY-MM-DD or YYYYMMDD)")
+        ] = None,
+        response_format: Annotated[
+            Literal["markdown", "json"],
+            Field("markdown", description="Response format"),
+        ] = "markdown",
+    ) -> Annotated[CallToolResult, IndustryIndexThsResponse]:
+        request = IndustryIndexThsRequest(
+            symbol=symbol,
+            limit=limit,
+            offset=offset,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        try:
+            response = service.industry_index_ths(request)
+        except MarketDataError as exc:
+            return _error_result(f"Error: {exc}. Check the board symbol and date range.")
+        return _success_result(
+            response, response_format, format_industry_index_ths_response
+        )
+
+    @mcp.tool(
+        description="Return EM industry board name records with pagination metadata.",
+        annotations=annotations,
+    )
+    def trading_industry_name_em(
+        limit: Annotated[
+            int, Field(200, ge=1, description="Number of recent records to return")
+        ] = 200,
+        offset: Annotated[
+            int, Field(0, ge=0, description="Number of most recent records to skip")
+        ] = 0,
+        response_format: Annotated[
+            Literal["markdown", "json"],
+            Field("markdown", description="Response format"),
+        ] = "markdown",
+    ) -> Annotated[CallToolResult, IndustryNameEmResponse]:
+        request = IndustryNameEmRequest(limit=limit, offset=offset)
+        try:
+            response = service.industry_name_em(request)
+        except MarketDataError as exc:
+            return _error_result(f"Error: {exc}. Check the EM industry board source.")
+        return _success_result(response, response_format, format_industry_name_em_response)
+
+    @mcp.tool(
+        description="Return EM industry board spot records with pagination metadata.",
+        annotations=annotations,
+    )
+    def trading_industry_spot_em(
+        symbol: Annotated[
+            str,
+            Field(..., min_length=1, description="EM industry board symbol"),
+        ],
+        limit: Annotated[
+            int, Field(200, ge=1, description="Number of recent records to return")
+        ] = 200,
+        offset: Annotated[
+            int, Field(0, ge=0, description="Number of most recent records to skip")
+        ] = 0,
+        response_format: Annotated[
+            Literal["markdown", "json"],
+            Field("markdown", description="Response format"),
+        ] = "markdown",
+    ) -> Annotated[CallToolResult, IndustrySpotEmResponse]:
+        request = IndustrySpotEmRequest(symbol=symbol, limit=limit, offset=offset)
+        try:
+            response = service.industry_spot_em(request)
+        except MarketDataError as exc:
+            return _error_result(f"Error: {exc}. Check the board symbol.")
+        return _success_result(response, response_format, format_industry_spot_em_response)
+
+    @mcp.tool(
+        description="Return EM industry board constituent records with pagination metadata.",
+        annotations=annotations,
+    )
+    def trading_industry_cons_em(
+        symbol: Annotated[
+            str,
+            Field(..., min_length=1, description="EM industry board symbol"),
+        ],
+        limit: Annotated[
+            int, Field(200, ge=1, description="Number of recent records to return")
+        ] = 200,
+        offset: Annotated[
+            int, Field(0, ge=0, description="Number of most recent records to skip")
+        ] = 0,
+        response_format: Annotated[
+            Literal["markdown", "json"],
+            Field("markdown", description="Response format"),
+        ] = "markdown",
+    ) -> Annotated[CallToolResult, IndustryConsEmResponse]:
+        request = IndustryConsEmRequest(symbol=symbol, limit=limit, offset=offset)
+        try:
+            response = service.industry_cons_em(request)
+        except MarketDataError as exc:
+            return _error_result(f"Error: {exc}. Check the board symbol.")
+        return _success_result(response, response_format, format_industry_cons_em_response)
+
+    @mcp.tool(
+        description=(
+            "Return EM industry board historical K-line records with pagination metadata. "
+            "period enum: '日k', '周k', '月k'; adjust enum: '', 'qfq', 'hfq'."
+        ),
+        annotations=annotations,
+    )
+    def trading_industry_hist_em(
+        symbol: Annotated[
+            str,
+            Field(..., min_length=1, description="EM industry board symbol"),
+        ],
+        period: Annotated[
+            Literal["日k", "周k", "月k"],
+            Field("日k", description="K-line period"),
+        ] = "日k",
+        adjust: Annotated[
+            Literal["", "qfq", "hfq"],
+            Field("", description="Adjust type"),
+        ] = "",
+        limit: Annotated[
+            int, Field(200, ge=1, description="Number of recent records to return")
+        ] = 200,
+        offset: Annotated[
+            int, Field(0, ge=0, description="Number of most recent records to skip")
+        ] = 0,
+        start_date: Annotated[
+            str | None, Field(None, description="Start date (YYYY-MM-DD or YYYYMMDD)")
+        ] = None,
+        end_date: Annotated[
+            str | None, Field(None, description="End date (YYYY-MM-DD or YYYYMMDD)")
+        ] = None,
+        response_format: Annotated[
+            Literal["markdown", "json"],
+            Field("markdown", description="Response format"),
+        ] = "markdown",
+    ) -> Annotated[CallToolResult, IndustryHistEmResponse]:
+        request = IndustryHistEmRequest(
+            symbol=symbol,
+            period=period,
+            adjust=adjust,
+            limit=limit,
+            offset=offset,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        try:
+            response = service.industry_hist_em(request)
+        except MarketDataError as exc:
+            return _error_result(
+                f"Error: {exc}. Check the board symbol, date range and adjust option."
+            )
+        return _success_result(response, response_format, format_industry_hist_em_response)
+
+    @mcp.tool(
+        description=(
+            "Return EM industry board intraday historical records with pagination metadata. "
+            "period enum: '1', '5', '15', '30', '60'."
+        ),
+        annotations=annotations,
+    )
+    def trading_industry_hist_min_em(
+        symbol: Annotated[
+            str,
+            Field(..., min_length=1, description="EM industry board symbol"),
+        ],
+        period: Annotated[
+            Literal["1", "5", "15", "30", "60"],
+            Field("5", description="Minute period"),
+        ] = "5",
+        limit: Annotated[
+            int, Field(200, ge=1, description="Number of recent records to return")
+        ] = 200,
+        offset: Annotated[
+            int, Field(0, ge=0, description="Number of most recent records to skip")
+        ] = 0,
+        response_format: Annotated[
+            Literal["markdown", "json"],
+            Field("markdown", description="Response format"),
+        ] = "markdown",
+    ) -> Annotated[CallToolResult, IndustryHistMinEmResponse]:
+        request = IndustryHistMinEmRequest(
+            symbol=symbol,
+            period=period,
+            limit=limit,
+            offset=offset,
+        )
+        try:
+            response = service.industry_hist_min_em(request)
+        except MarketDataError as exc:
+            return _error_result(f"Error: {exc}. Check the board symbol and period.")
+        return _success_result(
+            response, response_format, format_industry_hist_min_em_response
+        )
+
     @mcp.prompt()
     def tool_usage() -> str:
         return (
@@ -669,8 +952,26 @@ def create_server() -> FastMCP:
             "- trading_fundamental_us_indicators(symbol, indicator='年报', limit=200, "
             "offset=0, start_date=None, end_date=None, response_format='markdown'): "
             "return US fundamental indicators (raw records).\n"
+            "- trading_industry_summary_ths(limit=200, offset=0, response_format='markdown'): "
+            "return THS industry board summary records.\n"
+            "- trading_industry_index_ths(symbol, limit=200, offset=0, start_date=None, "
+            "end_date=None, response_format='markdown'): return THS industry index records.\n"
+            "- trading_industry_name_em(limit=200, offset=0, response_format='markdown'): "
+            "return EM industry board name records.\n"
+            "- trading_industry_spot_em(symbol, limit=200, offset=0, response_format='markdown'): "
+            "return EM industry board spot records.\n"
+            "- trading_industry_cons_em(symbol, limit=200, offset=0, response_format='markdown'): "
+            "return EM industry board constituent records.\n"
+            "- trading_industry_hist_em(symbol, period='日k', adjust='', limit=200, offset=0, "
+            "start_date=None, end_date=None, response_format='markdown'): "
+            "return EM industry historical K-line records.\n"
+            "- trading_industry_hist_min_em(symbol, period='5', limit=200, offset=0, "
+            "response_format='markdown'): return EM industry intraday history records.\n"
             "period_type allowed values: '1d' | '1w' | '1m'. "
             "Use exact enum value, not 'daily/weekly/monthly'.\n"
+            "Industry hist period values: '日k' | '周k' | '月k'; "
+            "adjust values: '' | 'qfq' | 'hfq'; minute period values: "
+            "'1' | '5' | '15' | '30' | '60'.\n"
             "Inputs require a positive limit and a non-empty symbol. "
             "US symbols: AAPL.US, AAPL, 105.AAPL, BRK.B."
         )
@@ -709,6 +1010,42 @@ def create_server() -> FastMCP:
             "trading_fundamental_us_indicators": {
                 "description": "US fundamental indicator records",
                 "fields": ["columns", "items", "symbol", "indicator"],
+            },
+            "trading_industry_summary_ths": {
+                "description": "THS industry board summary records",
+                "fields": ["columns", "items"],
+            },
+            "trading_industry_index_ths": {
+                "description": "THS industry board index records",
+                "fields": ["columns", "items", "symbol", "start_date", "end_date"],
+            },
+            "trading_industry_name_em": {
+                "description": "EM industry board name records",
+                "fields": ["columns", "items"],
+            },
+            "trading_industry_spot_em": {
+                "description": "EM industry board spot records",
+                "fields": ["columns", "items", "symbol"],
+            },
+            "trading_industry_cons_em": {
+                "description": "EM industry board constituent records",
+                "fields": ["columns", "items", "symbol"],
+            },
+            "trading_industry_hist_em": {
+                "description": "EM industry board historical K-line records",
+                "fields": [
+                    "columns",
+                    "items",
+                    "symbol",
+                    "period",
+                    "adjust",
+                    "start_date",
+                    "end_date",
+                ],
+            },
+            "trading_industry_hist_min_em": {
+                "description": "EM industry board intraday historical records",
+                "fields": ["columns", "items", "symbol", "period"],
             },
         }
         return json.dumps(payload, ensure_ascii=False, indent=2)
