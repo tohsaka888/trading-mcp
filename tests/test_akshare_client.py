@@ -16,19 +16,15 @@ def test_fetch_falls_back_to_tencent_with_normalized_symbol(monkeypatch) -> None
         calls["hist"] = symbol
         return pd.DataFrame()
 
-    def fake_hist_tx(
-        *, symbol: str, start_date: str, end_date: str, adjust: str
-    ):
+    def fake_hist_tx(*, symbol: str, start_date: str, end_date: str, adjust: str):
         calls["hist_tx"] = symbol
-        return pd.DataFrame(
-            {
-                "date": ["2024-01-01"],
-                "open": [1.0],
-                "high": [1.0],
-                "low": [1.0],
-                "close": [1.0],
-            }
-        )
+        return pd.DataFrame({
+            "date": ["2024-01-01"],
+            "open": [1.0],
+            "high": [1.0],
+            "low": [1.0],
+            "close": [1.0],
+        })
 
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist_tx", fake_hist_tx)
@@ -55,21 +51,17 @@ def test_fetch_falls_back_to_tencent_without_dates(monkeypatch) -> None:
         calls["hist"] = symbol
         raise RuntimeError("primary source failed")
 
-    def fake_hist_tx(
-        *, symbol: str, start_date: str, end_date: str, adjust: str
-    ):
+    def fake_hist_tx(*, symbol: str, start_date: str, end_date: str, adjust: str):
         calls["hist_tx"] = symbol
         calls["start_date"] = start_date
         calls["end_date"] = end_date
-        return pd.DataFrame(
-            {
-                "date": ["2024-01-01"],
-                "open": [1.0],
-                "high": [1.0],
-                "low": [1.0],
-                "close": [1.0],
-            }
-        )
+        return pd.DataFrame({
+            "date": ["2024-01-01"],
+            "open": [1.0],
+            "high": [1.0],
+            "low": [1.0],
+            "close": [1.0],
+        })
 
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist_tx", fake_hist_tx)
@@ -95,19 +87,15 @@ def test_fetch_cn_tencent_legacy_amount_maps_to_volume(monkeypatch) -> None:
     ):
         return pd.DataFrame()
 
-    def fake_hist_tx(
-        *, symbol: str, start_date: str, end_date: str, adjust: str
-    ):
-        return pd.DataFrame(
-            {
-                "date": ["2024-01-01"],
-                "open": [1.0],
-                "high": [1.1],
-                "low": [0.9],
-                "close": [1.0],
-                "amount": [12345.0],
-            }
-        )
+    def fake_hist_tx(*, symbol: str, start_date: str, end_date: str, adjust: str):
+        return pd.DataFrame({
+            "date": ["2024-01-01"],
+            "open": [1.0],
+            "high": [1.1],
+            "low": [0.9],
+            "close": [1.0],
+            "amount": [12345.0],
+        })
 
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist_tx", fake_hist_tx)
@@ -132,26 +120,24 @@ def test_fetch_cn_prefers_extended_tencent_frame(monkeypatch) -> None:
     ):
         return pd.DataFrame()
 
-    def fake_hist_tx(
-        *, symbol: str, start_date: str, end_date: str, adjust: str
-    ):
+    def fake_hist_tx(*, symbol: str, start_date: str, end_date: str, adjust: str):
         calls["hist_tx"] = symbol
         return pd.DataFrame()
 
-    def fake_extended(self, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
+    def fake_extended(
+        self, symbol: str, start_date: str, end_date: str
+    ) -> pd.DataFrame:
         calls["extended"] = symbol
-        return pd.DataFrame(
-            {
-                "date": ["2024-01-01"],
-                "open": [1.0],
-                "high": [1.1],
-                "low": [0.9],
-                "close": [1.0],
-                "volume": [1000.0],
-                "amount": [1000000.0],
-                "turnover_rate": [0.4],
-            }
-        )
+        return pd.DataFrame({
+            "date": ["2024-01-01"],
+            "open": [1.0],
+            "high": [1.1],
+            "low": [0.9],
+            "close": [1.0],
+            "volume": [1000.0],
+            "amount": [1000000.0],
+            "turnover_rate": [0.4],
+        })
 
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
     monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist_tx", fake_hist_tx)
@@ -181,15 +167,13 @@ def test_fetch_us_symbol_maps_to_eastmoney_hist(monkeypatch) -> None:
         *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
     ):
         calls["hist"] = symbol
-        return pd.DataFrame(
-            {
-                "date": ["2024-01-02"],
-                "open": [1.0],
-                "high": [1.0],
-                "low": [1.0],
-                "close": [1.0],
-            }
-        )
+        return pd.DataFrame({
+            "date": ["2024-01-02"],
+            "open": [1.0],
+            "high": [1.0],
+            "low": [1.0],
+            "close": [1.0],
+        })
 
     def fake_us_daily(*, symbol: str, adjust: str):
         calls["daily"] = symbol
@@ -217,15 +201,13 @@ def test_fetch_us_symbol_uses_direct_code(monkeypatch) -> None:
         *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
     ):
         calls["hist"] = symbol
-        return pd.DataFrame(
-            {
-                "date": ["2024-01-02"],
-                "open": [1.0],
-                "high": [1.0],
-                "low": [1.0],
-                "close": [1.0],
-            }
-        )
+        return pd.DataFrame({
+            "date": ["2024-01-02"],
+            "open": [1.0],
+            "high": [1.0],
+            "low": [1.0],
+            "close": [1.0],
+        })
 
     monkeypatch.setattr(akshare_client.ak, "stock_us_spot_em", fake_spot_em)
     monkeypatch.setattr(akshare_client.ak, "stock_us_hist", fake_us_hist)
@@ -248,15 +230,13 @@ def test_fetch_us_symbol_falls_back_to_daily_with_date_filter(monkeypatch) -> No
         raise AssertionError("hist should not be called when mapping is missing")
 
     def fake_us_daily(*, symbol: str, adjust: str):
-        return pd.DataFrame(
-            {
-                "date": ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"],
-                "open": [1.0, 2.0, 3.0, 4.0],
-                "high": [1.0, 2.0, 3.0, 4.0],
-                "low": [1.0, 2.0, 3.0, 4.0],
-                "close": [1.0, 2.0, 3.0, 4.0],
-            }
-        )
+        return pd.DataFrame({
+            "date": ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"],
+            "open": [1.0, 2.0, 3.0, 4.0],
+            "high": [1.0, 2.0, 3.0, 4.0],
+            "low": [1.0, 2.0, 3.0, 4.0],
+            "close": [1.0, 2.0, 3.0, 4.0],
+        })
 
     monkeypatch.setattr(akshare_client.ak, "stock_us_spot_em", fake_spot_em)
     monkeypatch.setattr(akshare_client.ak, "stock_us_hist", fake_us_hist)
@@ -284,15 +264,13 @@ def test_us_symbol_map_cache(monkeypatch) -> None:
     def fake_us_hist(
         *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
     ):
-        return pd.DataFrame(
-            {
-                "date": ["2024-01-02"],
-                "open": [1.0],
-                "high": [1.0],
-                "low": [1.0],
-                "close": [1.0],
-            }
-        )
+        return pd.DataFrame({
+            "date": ["2024-01-02"],
+            "open": [1.0],
+            "high": [1.0],
+            "low": [1.0],
+            "close": [1.0],
+        })
 
     monkeypatch.setattr(akshare_client.time, "time", fake_time)
     monkeypatch.setattr(akshare_client.ak, "stock_us_spot_em", fake_spot_em)
@@ -310,33 +288,33 @@ def test_fetch_us_resamples_weekly_from_daily(monkeypatch) -> None:
     def fake_spot_em():
         return pd.DataFrame()
 
-    def fake_us_hist(*, symbol: str, period: str, start_date: str, end_date: str, adjust: str):
+    def fake_us_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
         raise AssertionError("hist should not be called when mapping is missing")
 
     def fake_us_daily(*, symbol: str, adjust: str):
-        return pd.DataFrame(
-            {
-                "date": [
-                    "2024-01-01",
-                    "2024-01-02",
-                    "2024-01-03",
-                    "2024-01-04",
-                    "2024-01-05",
-                    "2024-01-08",
-                    "2024-01-09",
-                    "2024-01-10",
-                    "2024-01-11",
-                    "2024-01-12",
-                ],
-                "open": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                "high": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                "low": [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5],
-                "close": [1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1],
-                "volume": [100, 100, 100, 100, 100, 200, 200, 200, 200, 200],
-                "amount": [1000, 1000, 1000, 1000, 1000, 2000, 2000, 2000, 2000, 2000],
-                "turnover_rate": [0.1] * 10,
-            }
-        )
+        return pd.DataFrame({
+            "date": [
+                "2024-01-01",
+                "2024-01-02",
+                "2024-01-03",
+                "2024-01-04",
+                "2024-01-05",
+                "2024-01-08",
+                "2024-01-09",
+                "2024-01-10",
+                "2024-01-11",
+                "2024-01-12",
+            ],
+            "open": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            "high": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            "low": [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5],
+            "close": [1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1],
+            "volume": [100, 100, 100, 100, 100, 200, 200, 200, 200, 200],
+            "amount": [1000, 1000, 1000, 1000, 1000, 2000, 2000, 2000, 2000, 2000],
+            "turnover_rate": [0.1] * 10,
+        })
 
     monkeypatch.setattr(akshare_client.ak, "stock_us_spot_em", fake_spot_em)
     monkeypatch.setattr(akshare_client.ak, "stock_us_hist", fake_us_hist)
@@ -362,27 +340,27 @@ def test_fetch_us_resamples_monthly_from_daily(monkeypatch) -> None:
     def fake_spot_em():
         return pd.DataFrame()
 
-    def fake_us_hist(*, symbol: str, period: str, start_date: str, end_date: str, adjust: str):
+    def fake_us_hist(
+        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
+    ):
         raise AssertionError("hist should not be called when mapping is missing")
 
     def fake_us_daily(*, symbol: str, adjust: str):
-        return pd.DataFrame(
-            {
-                "date": [
-                    "2024-01-30",
-                    "2024-01-31",
-                    "2024-02-01",
-                    "2024-02-29",
-                ],
-                "open": [10, 11, 12, 13],
-                "high": [11, 12, 13, 14],
-                "low": [9, 10, 11, 12],
-                "close": [10.5, 11.5, 12.5, 13.5],
-                "volume": [100, 200, 300, 400],
-                "amount": [1000, 2000, 3000, 4000],
-                "turnover_rate": [0.2, 0.3, 0.4, 0.5],
-            }
-        )
+        return pd.DataFrame({
+            "date": [
+                "2024-01-30",
+                "2024-01-31",
+                "2024-02-01",
+                "2024-02-29",
+            ],
+            "open": [10, 11, 12, 13],
+            "high": [11, 12, 13, 14],
+            "low": [9, 10, 11, 12],
+            "close": [10.5, 11.5, 12.5, 13.5],
+            "volume": [100, 200, 300, 400],
+            "amount": [1000, 2000, 3000, 4000],
+            "turnover_rate": [0.2, 0.3, 0.4, 0.5],
+        })
 
     monkeypatch.setattr(akshare_client.ak, "stock_us_spot_em", fake_spot_em)
     monkeypatch.setattr(akshare_client.ak, "stock_us_hist", fake_us_hist)
@@ -441,7 +419,9 @@ def test_fetch_us_financial_report_normalizes_stock(monkeypatch) -> None:
         calls["indicator"] = indicator
         return pd.DataFrame({"REPORT_DATE": ["2024-12-31"], "AMOUNT": [100.0]})
 
-    monkeypatch.setattr(akshare_client.ak, "stock_financial_us_report_em", fake_us_report)
+    monkeypatch.setattr(
+        akshare_client.ak, "stock_financial_us_report_em", fake_us_report
+    )
 
     client = akshare_client.AkshareMarketDataClient()
     frame = client.fetch_us_financial_report("BRK.B", "资产负债表", "年报")
@@ -503,6 +483,93 @@ def test_fetch_industry_summary_ths(monkeypatch) -> None:
     assert frame["板块"].tolist() == ["元件"]
 
 
+def test_fetch_fund_flow_individual_em_normalizes_symbol(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_individual(*, stock: str, market: str):
+        calls["stock"] = stock
+        calls["market"] = market
+        return pd.DataFrame({
+            "日期": ["2024-01-01"],
+            "收盘价": [10.0],
+            "涨跌幅": [1.0],
+            "主力净流入-净额": [100.0],
+            "主力净流入-净占比": [2.0],
+        })
+
+    monkeypatch.setattr(
+        akshare_client.ak, "stock_individual_fund_flow", fake_individual
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_fund_flow_individual_em("600094.SH")
+
+    assert calls["stock"] == "600094"
+    assert calls["market"] == "sh"
+    assert frame["日期"].tolist() == [pd.Timestamp("2024-01-01")]
+
+
+def test_fetch_fund_flow_individual_em_falls_back_to_eastmoney(monkeypatch) -> None:
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "data": {
+                    "klines": [
+                        "2024-01-01,100,10,20,30,40,1,2,3,4,5,10.5,1.1,0,0",
+                        "2024-01-02,200,11,21,31,41,1.5,2.5,3.5,4.5,5.5,11.5,2.1,0,0",
+                    ]
+                }
+            }
+
+    def fake_individual(**_: object) -> pd.DataFrame:
+        raise TypeError("shape changed")
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_individual_fund_flow",
+        fake_individual,
+    )
+    monkeypatch.setattr(akshare_client.requests, "get", lambda *_, **__: FakeResponse())
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_fund_flow_individual_em(
+        "000001",
+        start_date="2024-01-02",
+        end_date="2024-01-02",
+    )
+
+    assert frame["日期"].tolist() == [pd.Timestamp("2024-01-02")]
+    assert frame["主力净流入-净额"].tolist() == [200]
+
+
+def test_fetch_fund_flow_sector_summary_unknown_board_raises(monkeypatch) -> None:
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "data": {"total": 1, "diff": [{"f12": "BK0001", "f14": "其他板块"}]}
+            }
+
+    def fake_summary(**_: object) -> pd.DataFrame:
+        raise ValueError("upstream failure")
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_sector_fund_flow_summary",
+        fake_summary,
+    )
+    monkeypatch.setattr(akshare_client.requests, "get", lambda *_, **__: FakeResponse())
+
+    client = akshare_client.AkshareMarketDataClient()
+    with pytest.raises(MarketDataError, match="Unknown Eastmoney board symbol"):
+        client.fetch_fund_flow_sector_summary_em("电源设备", "今日")
+
+
 def test_fetch_industry_index_ths_normalizes_dates(monkeypatch) -> None:
     calls: dict[str, str] = {}
 
@@ -512,9 +579,7 @@ def test_fetch_industry_index_ths_normalizes_dates(monkeypatch) -> None:
         calls["end_date"] = end_date
         return pd.DataFrame({"日期": ["2024-01-01"]})
 
-    monkeypatch.setattr(
-        akshare_client.ak, "stock_board_industry_index_ths", fake_index
-    )
+    monkeypatch.setattr(akshare_client.ak, "stock_board_industry_index_ths", fake_index)
 
     client = akshare_client.AkshareMarketDataClient()
     frame = client.fetch_industry_index_ths("元件", "2024-01-01", "2024-01-31")

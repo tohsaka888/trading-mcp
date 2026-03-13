@@ -60,6 +60,42 @@ class MarketDataClient(Protocol):
 
         raise NotImplementedError
 
+    def fetch_fund_flow_individual_em(
+        self,
+        symbol: str,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+    ) -> pd.DataFrame:
+        """Return Eastmoney individual stock fund-flow records."""
+
+        raise NotImplementedError
+
+    def fetch_fund_flow_individual_rank_em(
+        self,
+        indicator: str,
+    ) -> pd.DataFrame:
+        """Return Eastmoney individual stock fund-flow ranking records."""
+
+        raise NotImplementedError
+
+    def fetch_fund_flow_sector_rank_em(
+        self,
+        indicator: str,
+        sector_type: str,
+    ) -> pd.DataFrame:
+        """Return Eastmoney sector fund-flow ranking records."""
+
+        raise NotImplementedError
+
+    def fetch_fund_flow_sector_summary_em(
+        self,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        """Return Eastmoney sector constituent fund-flow records."""
+
+        raise NotImplementedError
+
     def fetch_industry_index_ths(
         self,
         symbol: str,

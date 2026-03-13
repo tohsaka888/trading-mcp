@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import date, datetime
 import re
 import time
-from typing import Iterable
+from typing import Any, Iterable
 
 import akshare as ak
-import requests
 import pandas as pd
+import requests
 
 from .client import DateLike, MarketDataError
 
@@ -29,6 +29,408 @@ _US_CACHE_TTL_SECONDS = 24 * 60 * 60
 _TX_KLINE_URL = "https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get"
 _TX_AMOUNT_SCALE = 10000.0
 _TX_TIMEOUT_SECONDS = 10.0
+_EM_CLIST_URL = "https://push2.eastmoney.com/api/qt/clist/get"
+_EM_FUND_FLOW_DAY_URL = "https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get"
+_EM_TIMEOUT_SECONDS = 15.0
+_EM_UT = "b2884a393a59ad64002292a3e90d46a5"
+_EM_BOARD_UT = "8dec03ba335b81bf4ebdf7b29ec27d15"
+_EM_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    )
+}
+_FUND_FLOW_INDIVIDUAL_RANK_CONFIG: dict[str, dict[str, Any]] = {
+    "今日": {
+        "fid": "f62",
+        "fields": "f12,f14,f2,f3,f62,f184,f66,f69,f72,f75,f78,f81,f84,f87",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f2": "最新价",
+            "f3": "今日涨跌幅",
+            "f62": "今日主力净流入-净额",
+            "f184": "今日主力净流入-净占比",
+            "f66": "今日超大单净流入-净额",
+            "f69": "今日超大单净流入-净占比",
+            "f72": "今日大单净流入-净额",
+            "f75": "今日大单净流入-净占比",
+            "f78": "今日中单净流入-净额",
+            "f81": "今日中单净流入-净占比",
+            "f84": "今日小单净流入-净额",
+            "f87": "今日小单净流入-净占比",
+        },
+        "columns": [
+            "序号",
+            "代码",
+            "名称",
+            "最新价",
+            "今日涨跌幅",
+            "今日主力净流入-净额",
+            "今日主力净流入-净占比",
+            "今日超大单净流入-净额",
+            "今日超大单净流入-净占比",
+            "今日大单净流入-净额",
+            "今日大单净流入-净占比",
+            "今日中单净流入-净额",
+            "今日中单净流入-净占比",
+            "今日小单净流入-净额",
+            "今日小单净流入-净占比",
+        ],
+    },
+    "3日": {
+        "fid": "f267",
+        "fields": "f12,f14,f2,f127,f267,f268,f269,f270,f271,f272,f273,f274,f275,f276",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f2": "最新价",
+            "f127": "3日涨跌幅",
+            "f267": "3日主力净流入-净额",
+            "f268": "3日主力净流入-净占比",
+            "f269": "3日超大单净流入-净额",
+            "f270": "3日超大单净流入-净占比",
+            "f271": "3日大单净流入-净额",
+            "f272": "3日大单净流入-净占比",
+            "f273": "3日中单净流入-净额",
+            "f274": "3日中单净流入-净占比",
+            "f275": "3日小单净流入-净额",
+            "f276": "3日小单净流入-净占比",
+        },
+        "columns": [
+            "序号",
+            "代码",
+            "名称",
+            "最新价",
+            "3日涨跌幅",
+            "3日主力净流入-净额",
+            "3日主力净流入-净占比",
+            "3日超大单净流入-净额",
+            "3日超大单净流入-净占比",
+            "3日大单净流入-净额",
+            "3日大单净流入-净占比",
+            "3日中单净流入-净额",
+            "3日中单净流入-净占比",
+            "3日小单净流入-净额",
+            "3日小单净流入-净占比",
+        ],
+    },
+    "5日": {
+        "fid": "f164",
+        "fields": "f12,f14,f2,f109,f164,f165,f166,f167,f168,f169,f170,f171,f172,f173",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f2": "最新价",
+            "f109": "5日涨跌幅",
+            "f164": "5日主力净流入-净额",
+            "f165": "5日主力净流入-净占比",
+            "f166": "5日超大单净流入-净额",
+            "f167": "5日超大单净流入-净占比",
+            "f168": "5日大单净流入-净额",
+            "f169": "5日大单净流入-净占比",
+            "f170": "5日中单净流入-净额",
+            "f171": "5日中单净流入-净占比",
+            "f172": "5日小单净流入-净额",
+            "f173": "5日小单净流入-净占比",
+        },
+        "columns": [
+            "序号",
+            "代码",
+            "名称",
+            "最新价",
+            "5日涨跌幅",
+            "5日主力净流入-净额",
+            "5日主力净流入-净占比",
+            "5日超大单净流入-净额",
+            "5日超大单净流入-净占比",
+            "5日大单净流入-净额",
+            "5日大单净流入-净占比",
+            "5日中单净流入-净额",
+            "5日中单净流入-净占比",
+            "5日小单净流入-净额",
+            "5日小单净流入-净占比",
+        ],
+    },
+    "10日": {
+        "fid": "f174",
+        "fields": "f12,f14,f2,f160,f174,f175,f176,f177,f178,f179,f180,f181,f182,f183",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f2": "最新价",
+            "f160": "10日涨跌幅",
+            "f174": "10日主力净流入-净额",
+            "f175": "10日主力净流入-净占比",
+            "f176": "10日超大单净流入-净额",
+            "f177": "10日超大单净流入-净占比",
+            "f178": "10日大单净流入-净额",
+            "f179": "10日大单净流入-净占比",
+            "f180": "10日中单净流入-净额",
+            "f181": "10日中单净流入-净占比",
+            "f182": "10日小单净流入-净额",
+            "f183": "10日小单净流入-净占比",
+        },
+        "columns": [
+            "序号",
+            "代码",
+            "名称",
+            "最新价",
+            "10日涨跌幅",
+            "10日主力净流入-净额",
+            "10日主力净流入-净占比",
+            "10日超大单净流入-净额",
+            "10日超大单净流入-净占比",
+            "10日大单净流入-净额",
+            "10日大单净流入-净占比",
+            "10日中单净流入-净额",
+            "10日中单净流入-净占比",
+            "10日小单净流入-净额",
+            "10日小单净流入-净占比",
+        ],
+    },
+}
+_FUND_FLOW_SECTOR_TYPE_MAP = {"行业资金流": "2", "概念资金流": "3", "地域资金流": "1"}
+_FUND_FLOW_SECTOR_RANK_CONFIG: dict[str, dict[str, Any]] = {
+    "今日": {
+        "fid": "f62",
+        "stat": "1",
+        "fields": "f12,f14,f3,f62,f184,f66,f69,f72,f75,f78,f81,f84,f87,f204,f205",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f3": "今日涨跌幅",
+            "f62": "今日主力净流入-净额",
+            "f184": "今日主力净流入-净占比",
+            "f66": "今日超大单净流入-净额",
+            "f69": "今日超大单净流入-净占比",
+            "f72": "今日大单净流入-净额",
+            "f75": "今日大单净流入-净占比",
+            "f78": "今日中单净流入-净额",
+            "f81": "今日中单净流入-净占比",
+            "f84": "今日小单净流入-净额",
+            "f87": "今日小单净流入-净占比",
+            "f204": "今日主力净流入最大股",
+            "f205": "今日主力净流入最大股代码",
+        },
+        "columns": [
+            "序号",
+            "名称",
+            "今日涨跌幅",
+            "今日主力净流入-净额",
+            "今日主力净流入-净占比",
+            "今日超大单净流入-净额",
+            "今日超大单净流入-净占比",
+            "今日大单净流入-净额",
+            "今日大单净流入-净占比",
+            "今日中单净流入-净额",
+            "今日中单净流入-净占比",
+            "今日小单净流入-净额",
+            "今日小单净流入-净占比",
+            "今日主力净流入最大股",
+        ],
+        "sort": "今日主力净流入-净额",
+    },
+    "5日": {
+        "fid": "f164",
+        "stat": "5",
+        "fields": "f12,f14,f109,f164,f165,f166,f167,f168,f169,f170,f171,f172,f173,f257,f258",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f109": "5日涨跌幅",
+            "f164": "5日主力净流入-净额",
+            "f165": "5日主力净流入-净占比",
+            "f166": "5日超大单净流入-净额",
+            "f167": "5日超大单净流入-净占比",
+            "f168": "5日大单净流入-净额",
+            "f169": "5日大单净流入-净占比",
+            "f170": "5日中单净流入-净额",
+            "f171": "5日中单净流入-净占比",
+            "f172": "5日小单净流入-净额",
+            "f173": "5日小单净流入-净占比",
+            "f257": "5日主力净流入最大股",
+            "f258": "5日主力净流入最大股代码",
+        },
+        "columns": [
+            "序号",
+            "名称",
+            "5日涨跌幅",
+            "5日主力净流入-净额",
+            "5日主力净流入-净占比",
+            "5日超大单净流入-净额",
+            "5日超大单净流入-净占比",
+            "5日大单净流入-净额",
+            "5日大单净流入-净占比",
+            "5日中单净流入-净额",
+            "5日中单净流入-净占比",
+            "5日小单净流入-净额",
+            "5日小单净流入-净占比",
+            "5日主力净流入最大股",
+        ],
+        "sort": "5日主力净流入-净额",
+    },
+    "10日": {
+        "fid": "f174",
+        "stat": "10",
+        "fields": "f12,f14,f160,f174,f175,f176,f177,f178,f179,f180,f181,f182,f183,f260,f261",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f160": "10日涨跌幅",
+            "f174": "10日主力净流入-净额",
+            "f175": "10日主力净流入-净占比",
+            "f176": "10日超大单净流入-净额",
+            "f177": "10日超大单净流入-净占比",
+            "f178": "10日大单净流入-净额",
+            "f179": "10日大单净流入-净占比",
+            "f180": "10日中单净流入-净额",
+            "f181": "10日中单净流入-净占比",
+            "f182": "10日小单净流入-净额",
+            "f183": "10日小单净流入-净占比",
+            "f260": "10日主力净流入最大股",
+            "f261": "10日主力净流入最大股代码",
+        },
+        "columns": [
+            "序号",
+            "名称",
+            "10日涨跌幅",
+            "10日主力净流入-净额",
+            "10日主力净流入-净占比",
+            "10日超大单净流入-净额",
+            "10日超大单净流入-净占比",
+            "10日大单净流入-净额",
+            "10日大单净流入-净占比",
+            "10日中单净流入-净额",
+            "10日中单净流入-净占比",
+            "10日小单净流入-净额",
+            "10日小单净流入-净占比",
+            "10日主力净流入最大股",
+        ],
+        "sort": "10日主力净流入-净额",
+    },
+}
+_FUND_FLOW_SECTOR_SUMMARY_CONFIG: dict[str, dict[str, Any]] = {
+    "今日": {
+        "fid": "f62",
+        "fields": "f12,f14,f2,f3,f62,f184,f66,f69,f72,f75,f78,f81,f84,f87",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f2": "最新价",
+            "f3": "今天涨跌幅",
+            "f62": "今日主力净流入-净额",
+            "f184": "今日主力净流入-净占比",
+            "f66": "今日超大单净流入-净额",
+            "f69": "今日超大单净流入-净占比",
+            "f72": "今日大单净流入-净额",
+            "f75": "今日大单净流入-净占比",
+            "f78": "今日中单净流入-净额",
+            "f81": "今日中单净流入-净占比",
+            "f84": "今日小单净流入-净额",
+            "f87": "今日小单净流入-净占比",
+        },
+        "columns": [
+            "序号",
+            "代码",
+            "名称",
+            "最新价",
+            "今天涨跌幅",
+            "今日主力净流入-净额",
+            "今日主力净流入-净占比",
+            "今日超大单净流入-净额",
+            "今日超大单净流入-净占比",
+            "今日大单净流入-净额",
+            "今日大单净流入-净占比",
+            "今日中单净流入-净额",
+            "今日中单净流入-净占比",
+            "今日小单净流入-净额",
+            "今日小单净流入-净占比",
+        ],
+    },
+    "5日": {
+        "fid": "f164",
+        "fields": "f12,f14,f2,f109,f164,f165,f166,f167,f168,f169,f170,f171,f172,f173",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f2": "最新价",
+            "f109": "5日涨跌幅",
+            "f164": "5日主力净流入-净额",
+            "f165": "5日主力净流入-净占比",
+            "f166": "5日超大单净流入-净额",
+            "f167": "5日超大单净流入-净占比",
+            "f168": "5日大单净流入-净额",
+            "f169": "5日大单净流入-净占比",
+            "f170": "5日中单净流入-净额",
+            "f171": "5日中单净流入-净占比",
+            "f172": "5日小单净流入-净额",
+            "f173": "5日小单净流入-净占比",
+        },
+        "columns": [
+            "序号",
+            "代码",
+            "名称",
+            "最新价",
+            "5日涨跌幅",
+            "5日主力净流入-净额",
+            "5日主力净流入-净占比",
+            "5日超大单净流入-净额",
+            "5日超大单净流入-净占比",
+            "5日大单净流入-净额",
+            "5日大单净流入-净占比",
+            "5日中单净流入-净额",
+            "5日中单净流入-净占比",
+            "5日小单净流入-净额",
+            "5日小单净流入-净占比",
+        ],
+    },
+    "10日": {
+        "fid": "f174",
+        "fields": "f12,f14,f2,f160,f174,f175,f176,f177,f178,f179,f180,f181,f182,f183",
+        "rename": {
+            "f12": "代码",
+            "f14": "名称",
+            "f2": "最新价",
+            "f160": "10日涨跌幅",
+            "f174": "10日主力净流入-净额",
+            "f175": "10日主力净流入-净占比",
+            "f176": "10日超大单净流入-净额",
+            "f177": "10日超大单净流入-净占比",
+            "f178": "10日大单净流入-净额",
+            "f179": "10日大单净流入-净占比",
+            "f180": "10日中单净流入-净额",
+            "f181": "10日中单净流入-净占比",
+            "f182": "10日小单净流入-净额",
+            "f183": "10日小单净流入-净占比",
+        },
+        "columns": [
+            "序号",
+            "代码",
+            "名称",
+            "最新价",
+            "10日涨跌幅",
+            "10日主力净流入-净额",
+            "10日主力净流入-净占比",
+            "10日超大单净流入-净额",
+            "10日超大单净流入-净占比",
+            "10日大单净流入-净额",
+            "10日大单净流入-净占比",
+            "10日中单净流入-净额",
+            "10日中单净流入-净占比",
+            "10日小单净流入-净额",
+            "10日小单净流入-净占比",
+        ],
+    },
+}
+
+
+def _expected_columns_present(frame: pd.DataFrame, columns: Iterable[str]) -> bool:
+    return (
+        frame is not None
+        and not frame.empty
+        and all(column in frame.columns for column in columns)
+    )
 
 
 def _to_ak_date(value: DateLike | None) -> str | None:
@@ -285,7 +687,8 @@ def _resample_ohlcv(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
         agg[turnover_rate_col] = "sum"
 
     resampled = (
-        indexed.resample(rule, label="right", closed="right")
+        indexed
+        .resample(rule, label="right", closed="right")
         .agg(agg)
         .dropna(subset=[close_col])
     )
@@ -331,7 +734,9 @@ class AkshareMarketDataClient:
         resolved_start = start_date.replace("-", "")
         resolved_end = end_date.replace("-", "")
         try:
-            init_start = str(stock_hist_tx.get_tx_start_year(symbol=symbol)).replace("-", "")
+            init_start = str(stock_hist_tx.get_tx_start_year(symbol=symbol)).replace(
+                "-", ""
+            )
             if int(resolved_start) < int(init_start):
                 resolved_start = init_start
         except Exception:
@@ -384,16 +789,14 @@ class AkshareMarketDataClient:
         if raw.empty or raw.shape[1] < 6:
             return pd.DataFrame()
 
-        frame = pd.DataFrame(
-            {
-                "date": pd.to_datetime(raw.iloc[:, 0], errors="coerce"),
-                "open": pd.to_numeric(raw.iloc[:, 1], errors="coerce"),
-                "close": pd.to_numeric(raw.iloc[:, 2], errors="coerce"),
-                "high": pd.to_numeric(raw.iloc[:, 3], errors="coerce"),
-                "low": pd.to_numeric(raw.iloc[:, 4], errors="coerce"),
-                "volume": pd.to_numeric(raw.iloc[:, 5], errors="coerce"),
-            }
-        )
+        frame = pd.DataFrame({
+            "date": pd.to_datetime(raw.iloc[:, 0], errors="coerce"),
+            "open": pd.to_numeric(raw.iloc[:, 1], errors="coerce"),
+            "close": pd.to_numeric(raw.iloc[:, 2], errors="coerce"),
+            "high": pd.to_numeric(raw.iloc[:, 3], errors="coerce"),
+            "low": pd.to_numeric(raw.iloc[:, 4], errors="coerce"),
+            "volume": pd.to_numeric(raw.iloc[:, 5], errors="coerce"),
+        })
         if raw.shape[1] > 7:
             frame["turnover_rate"] = pd.to_numeric(raw.iloc[:, 7], errors="coerce")
         if raw.shape[1] > 8:
@@ -513,9 +916,7 @@ class AkshareMarketDataClient:
             if primary_frame is not None and not primary_frame.empty:
                 if period_type != "1d" and not used_native_period:
                     filtered = _filter_frame_by_dates(primary_frame, start, end)
-                    resampled = _resample_ohlcv(
-                        filtered, _period_to_rule(period_type)
-                    )
+                    resampled = _resample_ohlcv(filtered, _period_to_rule(period_type))
                     resampled = _filter_frame_by_dates(resampled, start, end)
                     return _normalize_frame(resampled)
                 return _normalize_frame(primary_frame)
@@ -541,9 +942,269 @@ class AkshareMarketDataClient:
             return _normalize_frame(fallback_frame)
 
         if primary_error is not None:
-            raise MarketDataError(f"Akshare US fetch failed for symbol={symbol}") from primary_error
+            raise MarketDataError(
+                f"Akshare US fetch failed for symbol={symbol}"
+            ) from primary_error
 
         return pd.DataFrame()
+
+    def _request_json(self, url: str, params: dict[str, object]) -> dict[str, Any]:
+        response = requests.get(
+            url,
+            params=params,
+            headers=_EM_HEADERS,
+            timeout=_EM_TIMEOUT_SECONDS,
+        )
+        raise_for_status = getattr(response, "raise_for_status", None)
+        if callable(raise_for_status):
+            raise_for_status()
+        return response.json()
+
+    def _fetch_clist_pages(self, params: dict[str, object]) -> list[dict[str, Any]]:
+        initial = self._request_json(_EM_CLIST_URL, params)
+        data = initial.get("data") or {}
+        total = int(data.get("total") or 0)
+        first_rows = data.get("diff") or []
+        if total == 0:
+            return list(first_rows)
+
+        page_size = int(params.get("pz") or 100)
+        total_pages = max((total + page_size - 1) // page_size, 1)
+        rows: list[dict[str, Any]] = list(first_rows)
+        for page in range(2, total_pages + 1):
+            paged_params = dict(params)
+            paged_params["pn"] = str(page)
+            page_json = self._request_json(_EM_CLIST_URL, paged_params)
+            page_data = page_json.get("data") or {}
+            rows.extend(page_data.get("diff") or [])
+        return rows
+
+    @staticmethod
+    def _finalize_rank_frame(
+        frame: pd.DataFrame,
+        columns: list[str],
+        numeric_columns: Iterable[str],
+        *,
+        code_column: str | None = "代码",
+    ) -> pd.DataFrame:
+        if frame is None or frame.empty:
+            return pd.DataFrame(columns=columns)
+
+        normalized = frame.copy()
+        if code_column and code_column in normalized.columns:
+            normalized[code_column] = normalized[code_column].astype(str).str.zfill(6)
+
+        for column in numeric_columns:
+            if column in normalized.columns:
+                normalized[column] = pd.to_numeric(normalized[column], errors="coerce")
+
+        normalized.insert(0, "序号", range(1, len(normalized) + 1))
+        return normalized[columns]
+
+    def _fetch_fund_flow_individual_em_fallback(
+        self,
+        symbol: str,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+    ) -> pd.DataFrame:
+        stock, market = _normalize_symbol(symbol)
+        if market is None:
+            raise MarketDataError("Unable to infer A-share exchange for symbol")
+
+        market_map = {"sh": 1, "sz": 0, "bj": 0}
+        data_json = self._request_json(
+            _EM_FUND_FLOW_DAY_URL,
+            {
+                "lmt": "0",
+                "klt": "101",
+                "secid": f"{market_map[market]}.{stock}",
+                "fields1": "f1,f2,f3,f7",
+                "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f62,f63,f64,f65",
+                "ut": _EM_UT,
+                "_": int(time.time() * 1000),
+            },
+        )
+        klines = ((data_json.get("data") or {}).get("klines")) or []
+        if not klines:
+            return pd.DataFrame()
+
+        frame = pd.DataFrame([item.split(",") for item in klines])
+        if frame.shape[1] < 13:
+            raise MarketDataError(
+                "Eastmoney individual fund-flow response is malformed"
+            )
+
+        frame.columns = [
+            "日期",
+            "主力净流入-净额",
+            "小单净流入-净额",
+            "中单净流入-净额",
+            "大单净流入-净额",
+            "超大单净流入-净额",
+            "主力净流入-净占比",
+            "小单净流入-净占比",
+            "中单净流入-净占比",
+            "大单净流入-净占比",
+            "超大单净流入-净占比",
+            "收盘价",
+            "涨跌幅",
+            *[f"unused_{index}" for index in range(frame.shape[1] - 13)],
+        ]
+        frame = frame[
+            [
+                "日期",
+                "收盘价",
+                "涨跌幅",
+                "主力净流入-净额",
+                "主力净流入-净占比",
+                "超大单净流入-净额",
+                "超大单净流入-净占比",
+                "大单净流入-净额",
+                "大单净流入-净占比",
+                "中单净流入-净额",
+                "中单净流入-净占比",
+                "小单净流入-净额",
+                "小单净流入-净占比",
+            ]
+        ]
+        for column in frame.columns:
+            if column != "日期":
+                frame[column] = pd.to_numeric(frame[column], errors="coerce")
+        frame["日期"] = pd.to_datetime(frame["日期"], errors="coerce")
+        frame = frame.dropna(subset=["日期"]).sort_values("日期").reset_index(drop=True)
+        return _filter_frame_by_dates(frame, start_date, end_date).reset_index(
+            drop=True
+        )
+
+    def _fetch_fund_flow_individual_rank_em_fallback(
+        self, indicator: str
+    ) -> pd.DataFrame:
+        config = _FUND_FLOW_INDIVIDUAL_RANK_CONFIG[indicator]
+        rows = self._fetch_clist_pages({
+            "fid": config["fid"],
+            "po": "1",
+            "pz": "100",
+            "pn": "1",
+            "np": "1",
+            "fltt": "2",
+            "invt": "2",
+            "ut": _EM_UT,
+            "fs": (
+                "m:0+t:6+f:!2,m:0+t:13+f:!2,m:0+t:80+f:!2,"
+                "m:1+t:2+f:!2,m:1+t:23+f:!2,m:0+t:7+f:!2,m:1+t:3+f:!2"
+            ),
+            "fields": config["fields"],
+        })
+        frame = pd.DataFrame(rows)
+        if frame.empty:
+            return pd.DataFrame(columns=config["columns"])
+        renamed = frame.rename(columns=config["rename"])
+        payload = renamed[
+            [column for column in config["columns"] if column != "序号"]
+        ].copy()
+        numeric_columns = [
+            column for column in payload.columns if column not in {"代码", "名称"}
+        ]
+        return self._finalize_rank_frame(payload, config["columns"], numeric_columns)
+
+    def _fetch_fund_flow_sector_rank_em_raw(
+        self,
+        indicator: str,
+        sector_type: str,
+    ) -> pd.DataFrame:
+        config = _FUND_FLOW_SECTOR_RANK_CONFIG[indicator]
+        rows = self._fetch_clist_pages({
+            "pn": "1",
+            "pz": "100",
+            "po": "1",
+            "np": "1",
+            "ut": _EM_UT,
+            "fltt": "2",
+            "invt": "2",
+            "fid0": config["fid"],
+            "fs": f"m:90 t:{_FUND_FLOW_SECTOR_TYPE_MAP[sector_type]}",
+            "stat": config["stat"],
+            "fields": config["fields"],
+            "rt": "52975239",
+            "_": int(time.time() * 1000),
+        })
+        return pd.DataFrame(rows)
+
+    def _fetch_fund_flow_sector_rank_em_fallback(
+        self,
+        indicator: str,
+        sector_type: str,
+    ) -> pd.DataFrame:
+        config = _FUND_FLOW_SECTOR_RANK_CONFIG[indicator]
+        frame = self._fetch_fund_flow_sector_rank_em_raw(indicator, sector_type)
+        if frame.empty:
+            return pd.DataFrame(columns=config["columns"])
+
+        renamed = frame.rename(columns=config["rename"])
+        payload = renamed[
+            [column for column in config["columns"] if column != "序号"]
+        ].copy()
+        sort_column = config["sort"]
+        payload[sort_column] = pd.to_numeric(payload[sort_column], errors="coerce")
+        payload = payload.sort_values(sort_column, ascending=False).reset_index(
+            drop=True
+        )
+        numeric_columns = [column for column in payload.columns if column != "名称"]
+        return self._finalize_rank_frame(
+            payload,
+            config["columns"],
+            numeric_columns,
+            code_column=None,
+        )
+
+    def _resolve_sector_board_code(self, symbol: str) -> str:
+        raw = self._fetch_fund_flow_sector_rank_em_raw("今日", "行业资金流")
+        if raw.empty:
+            raise MarketDataError("Unable to load Eastmoney sector board mapping")
+
+        normalized = raw.rename(columns={"f12": "代码", "f14": "名称"})
+        matched = normalized.loc[
+            normalized["名称"].astype(str).str.strip() == symbol.strip()
+        ]
+        if matched.empty:
+            raise MarketDataError(f"Unknown Eastmoney board symbol: {symbol}")
+        return str(matched.iloc[0]["代码"]).strip()
+
+    def _fetch_fund_flow_sector_summary_em_fallback(
+        self,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        config = _FUND_FLOW_SECTOR_SUMMARY_CONFIG[indicator]
+        board_code = self._resolve_sector_board_code(symbol)
+        data_json = self._request_json(
+            _EM_CLIST_URL,
+            {
+                "fid": config["fid"],
+                "po": "1",
+                "pz": "50000",
+                "pn": "1",
+                "np": "2",
+                "fltt": "2",
+                "invt": "2",
+                "ut": _EM_BOARD_UT,
+                "fs": f"b:{board_code}",
+                "fields": config["fields"],
+            },
+        )
+        rows = ((data_json.get("data") or {}).get("diff")) or []
+        frame = pd.DataFrame(rows)
+        if frame.empty:
+            return pd.DataFrame(columns=config["columns"])
+
+        renamed = frame.rename(columns=config["rename"])
+        payload = renamed[
+            [column for column in config["columns"] if column != "序号"]
+        ].copy()
+        numeric_columns = [
+            column for column in payload.columns if column not in {"代码", "名称"}
+        ]
+        return self._finalize_rank_frame(payload, config["columns"], numeric_columns)
 
     def fetch_cn_financial_indicators(
         self,
@@ -615,6 +1276,113 @@ class AkshareMarketDataClient:
         if frame is None:
             return pd.DataFrame()
         return frame
+
+    def fetch_fund_flow_individual_em(
+        self,
+        symbol: str,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+    ) -> pd.DataFrame:
+        stock, market = _normalize_symbol(symbol)
+        if market is None:
+            raise MarketDataError("Unable to infer A-share exchange for symbol")
+        try:
+            frame = ak.stock_individual_fund_flow(stock=stock, market=market)
+        except Exception:
+            frame = None
+
+        expected = [
+            "日期",
+            "收盘价",
+            "涨跌幅",
+            "主力净流入-净额",
+            "主力净流入-净占比",
+        ]
+        if _expected_columns_present(frame, expected):
+            filtered = _filter_frame_by_dates(frame, start_date, end_date)
+            return _normalize_frame(filtered)
+
+        try:
+            return self._fetch_fund_flow_individual_em_fallback(
+                symbol,
+                start_date,
+                end_date,
+            )
+        except Exception as exc:
+            if isinstance(exc, MarketDataError):
+                raise
+            raise MarketDataError(
+                f"Eastmoney individual fund-flow fetch failed for symbol={symbol}"
+            ) from exc
+
+    def fetch_fund_flow_individual_rank_em(self, indicator: str) -> pd.DataFrame:
+        try:
+            frame = ak.stock_individual_fund_flow_rank(indicator=indicator)
+        except Exception:
+            frame = None
+
+        config = _FUND_FLOW_INDIVIDUAL_RANK_CONFIG[indicator]
+        if _expected_columns_present(frame, config["columns"]):
+            return frame.reset_index(drop=True)
+
+        try:
+            return self._fetch_fund_flow_individual_rank_em_fallback(indicator)
+        except Exception as exc:
+            raise MarketDataError(
+                "Eastmoney individual fund-flow ranking fetch failed "
+                f"for indicator={indicator}"
+            ) from exc
+
+    def fetch_fund_flow_sector_rank_em(
+        self,
+        indicator: str,
+        sector_type: str,
+    ) -> pd.DataFrame:
+        try:
+            frame = ak.stock_sector_fund_flow_rank(
+                indicator=indicator,
+                sector_type=sector_type,
+            )
+        except Exception:
+            frame = None
+
+        config = _FUND_FLOW_SECTOR_RANK_CONFIG[indicator]
+        if _expected_columns_present(frame, config["columns"]):
+            return frame.reset_index(drop=True)
+
+        try:
+            return self._fetch_fund_flow_sector_rank_em_fallback(indicator, sector_type)
+        except Exception as exc:
+            raise MarketDataError(
+                "Eastmoney sector fund-flow ranking fetch failed "
+                f"for indicator={indicator}, sector_type={sector_type}"
+            ) from exc
+
+    def fetch_fund_flow_sector_summary_em(
+        self,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        try:
+            frame = ak.stock_sector_fund_flow_summary(
+                symbol=symbol.strip(), indicator=indicator
+            )
+        except Exception:
+            frame = None
+
+        config = _FUND_FLOW_SECTOR_SUMMARY_CONFIG[indicator]
+        if _expected_columns_present(frame, config["columns"]):
+            return frame.reset_index(drop=True)
+
+        try:
+            return self._fetch_fund_flow_sector_summary_em_fallback(symbol, indicator)
+        except Exception as exc:
+            if isinstance(exc, MarketDataError):
+                raise
+            raise MarketDataError(
+                "Eastmoney sector constituent fund-flow fetch failed "
+                f"for symbol={symbol}, indicator={indicator}"
+            ) from exc
 
     def fetch_industry_index_ths(
         self,
@@ -720,9 +1488,11 @@ class AkshareMarketDataClient:
         period_type: str = "1d",
     ) -> pd.DataFrame:
         cleaned = symbol.strip()
-        if _US_CODE_PATTERN.match(cleaned.upper()) or cleaned.upper().endswith(
-            _US_SUFFIX
-        ) or _US_TICKER_PATTERN.match(cleaned.upper()):
+        if (
+            _US_CODE_PATTERN.match(cleaned.upper())
+            or cleaned.upper().endswith(_US_SUFFIX)
+            or _US_TICKER_PATTERN.match(cleaned.upper())
+        ):
             return self._fetch_us(symbol, start, end, period_type)
 
         start_date = _to_ak_date(start)
@@ -764,9 +1534,7 @@ class AkshareMarketDataClient:
         if primary_frame is not None and not primary_frame.empty:
             if period_type != "1d" and not primary_used_native_period:
                 filtered = _filter_frame_by_dates(primary_frame, start, end)
-                resampled = _resample_ohlcv(
-                    filtered, _period_to_rule(period_type)
-                )
+                resampled = _resample_ohlcv(filtered, _period_to_rule(period_type))
                 resampled = _filter_frame_by_dates(resampled, start, end)
                 return _normalize_frame(resampled)
             return _normalize_frame(primary_frame)
@@ -795,9 +1563,7 @@ class AkshareMarketDataClient:
         if fallback_frame is not None and not fallback_frame.empty:
             if period_type != "1d":
                 filtered = _filter_frame_by_dates(fallback_frame, start, end)
-                resampled = _resample_ohlcv(
-                    filtered, _period_to_rule(period_type)
-                )
+                resampled = _resample_ohlcv(filtered, _period_to_rule(period_type))
                 resampled = _filter_frame_by_dates(resampled, start, end)
                 return _normalize_frame(resampled)
             return _normalize_frame(fallback_frame)
@@ -809,6 +1575,8 @@ class AkshareMarketDataClient:
             return _normalize_frame(fallback_frame)
 
         if primary_error is not None:
-            raise MarketDataError(f"Akshare fetch failed for symbol={symbol}") from primary_error
+            raise MarketDataError(
+                f"Akshare fetch failed for symbol={symbol}"
+            ) from primary_error
 
         return pd.DataFrame()

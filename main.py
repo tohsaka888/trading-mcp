@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mcp_app import create_server
+from mcp_server import create_server
 
 mcp = create_server()
 

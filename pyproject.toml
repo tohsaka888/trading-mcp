@@ -16,6 +16,7 @@ include = [
     "config",
     "data",
     "indicators",
+    "mcp_server",
     "models",
     "services",
     "tests",

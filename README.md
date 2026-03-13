@@ -115,6 +115,10 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_rsi(symbol, limit, period=14, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_ma(symbol, limit, period=20, ma_type="sma", offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_volume(symbol, limit, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_fund_flow_individual_em(symbol, limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_fund_flow_individual_rank_em(indicator="5日", limit=200, offset=0, response_format="markdown")`
+- `trading_fund_flow_sector_rank_em(indicator="今日", sector_type="行业资金流", limit=200, offset=0, response_format="markdown")`
+- `trading_fund_flow_sector_summary_em(symbol, indicator="今日", limit=200, offset=0, response_format="markdown")`
 - `trading_fundamental_cn_indicators(symbol, indicator="按报告期", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
 - `trading_fundamental_us_report(stock, symbol="资产负债表", indicator="年报", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
 - `trading_fundamental_us_indicators(symbol, indicator="年报", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
@@ -148,6 +152,18 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
   - 美股：`volume_unit=share`，`amount_unit=USD`
   - `turnover_rate_unit=percent`
 - 当周/月是由日线聚合而来时，`turnover_rate` 可能为 `null`
+
+资金流向工具说明：
+- `trading_fund_flow_individual_em`：东方财富个股资金流，`symbol` 支持 `000001`、`600519.SH`、`830799.BJ`
+- `trading_fund_flow_individual_rank_em`：东方财富个股资金流排名
+  - `indicator` 枚举：`今日`、`3日`、`5日`、`10日`
+- `trading_fund_flow_sector_rank_em`：东方财富板块资金流排名
+  - `indicator` 枚举：`今日`、`5日`、`10日`
+  - `sector_type` 枚举：`行业资金流`、`概念资金流`、`地域资金流`
+- `trading_fund_flow_sector_summary_em`：东方财富指定板块的成份股资金流
+  - `symbol` 为东方财富板块名称，如 `电源设备`
+  - `indicator` 枚举：`今日`、`5日`、`10日`
+- 资金流向结果统一按原始表格返回：`columns + items`
 
 符号说明：
 - A 股示例：`000001`、`300308.SZ`

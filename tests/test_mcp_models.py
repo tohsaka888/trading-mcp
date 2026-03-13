@@ -4,6 +4,10 @@ from pydantic import ValidationError
 from datetime import date, datetime
 
 from models.mcp_tools import (
+    FundFlowIndividualEmRequest,
+    FundFlowIndividualRankEmRequest,
+    FundFlowSectorRankEmRequest,
+    FundFlowSectorSummaryEmRequest,
     FundamentalCnIndicatorsRequest,
     FundamentalUsIndicatorsRequest,
     FundamentalUsReportRequest,
@@ -108,6 +112,41 @@ def test_volume_point_timestamp_json_includes_timezone() -> None:
     point = VolumePoint(timestamp=datetime(2024, 1, 1, 0, 0, 0), volume=100.0)
     payload = point.model_dump(mode="json")
     assert payload["timestamp"].endswith("+00:00")
+
+
+def test_fund_flow_individual_request_defaults() -> None:
+    request = FundFlowIndividualEmRequest(symbol="000001")
+    assert request.limit == 200
+    assert request.offset == 0
+    assert request.start_date is None
+
+
+def test_fund_flow_individual_date_validation() -> None:
+    request = FundFlowIndividualEmRequest(
+        symbol="000001",
+        start_date="2024-01-01",
+        end_date="20240131",
+    )
+    assert request.start_date == "2024-01-01"
+    assert request.end_date == "20240131"
+
+
+def test_fund_flow_individual_rank_indicator_validation() -> None:
+    with pytest.raises(ValidationError):
+        FundFlowIndividualRankEmRequest(indicator="30日")
+
+
+def test_fund_flow_sector_rank_validation() -> None:
+    with pytest.raises(ValidationError):
+        FundFlowSectorRankEmRequest(indicator="3日")
+
+    with pytest.raises(ValidationError):
+        FundFlowSectorRankEmRequest(sector_type="主题资金流")
+
+
+def test_fund_flow_sector_summary_indicator_validation() -> None:
+    with pytest.raises(ValidationError):
+        FundFlowSectorSummaryEmRequest(symbol="电源设备", indicator="3日")
 
 
 def test_fundamental_cn_request_defaults() -> None:

@@ -10,6 +10,14 @@ import talib
 
 from data.client import MarketDataClient, MarketDataError
 from models.mcp_tools import (
+    FundFlowIndividualEmRequest,
+    FundFlowIndividualEmResponse,
+    FundFlowIndividualRankEmRequest,
+    FundFlowIndividualRankEmResponse,
+    FundFlowSectorRankEmRequest,
+    FundFlowSectorRankEmResponse,
+    FundFlowSectorSummaryEmRequest,
+    FundFlowSectorSummaryEmResponse,
     FundamentalCnIndicatorsRequest,
     FundamentalCnIndicatorsResponse,
     FundamentalUsIndicatorsRequest,
@@ -195,7 +203,9 @@ def _to_json_friendly_value(value: object) -> Any:
     return value
 
 
-def build_fundamental_records(frame: pd.DataFrame) -> tuple[list[str], list[dict[str, Any]]]:
+def build_fundamental_records(
+    frame: pd.DataFrame,
+) -> tuple[list[str], list[dict[str, Any]]]:
     if frame is None or frame.empty:
         return [], []
 
@@ -302,6 +312,26 @@ def _paginate_latest(
     count = len(sliced)
     has_more = start > 0
     next_offset = offset + limit if has_more else None
+    return sliced, total, count, has_more, next_offset
+
+
+def _paginate_head(
+    items: Sequence[T],
+    limit: int,
+    offset: int,
+) -> tuple[list[T], int, int, bool, int | None]:
+    total = len(items)
+    if total == 0 or limit <= 0:
+        return [], total, 0, False, None
+
+    if offset >= total:
+        return [], total, 0, False, None
+
+    end = min(offset + limit, total)
+    sliced = list(items[offset:end])
+    count = len(sliced)
+    has_more = end < total
+    next_offset = end if has_more else None
     return sliced, total, count, has_more, next_offset
 
 
@@ -644,6 +674,104 @@ class MarketService:
             turnover_rate_unit="percent",
         )
 
+    def fund_flow_individual_em(
+        self, request: FundFlowIndividualEmRequest
+    ) -> FundFlowIndividualEmResponse:
+        frame = self._client.fetch_fund_flow_individual_em(
+            request.symbol,
+            request.start_date,
+            request.end_date,
+        )
+        columns, records = _build_table_records(
+            frame,
+            start_date=request.start_date,
+            end_date=request.end_date,
+        )
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return FundFlowIndividualEmResponse(
+            symbol=request.symbol,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+            start_date=request.start_date,
+            end_date=request.end_date,
+        )
+
+    def fund_flow_individual_rank_em(
+        self, request: FundFlowIndividualRankEmRequest
+    ) -> FundFlowIndividualRankEmResponse:
+        frame = self._client.fetch_fund_flow_individual_rank_em(request.indicator)
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_head(
+            records, request.limit, request.offset
+        )
+        return FundFlowIndividualRankEmResponse(
+            indicator=request.indicator,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
+    def fund_flow_sector_rank_em(
+        self, request: FundFlowSectorRankEmRequest
+    ) -> FundFlowSectorRankEmResponse:
+        frame = self._client.fetch_fund_flow_sector_rank_em(
+            request.indicator,
+            request.sector_type,
+        )
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_head(
+            records, request.limit, request.offset
+        )
+        return FundFlowSectorRankEmResponse(
+            indicator=request.indicator,
+            sector_type=request.sector_type,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
+    def fund_flow_sector_summary_em(
+        self, request: FundFlowSectorSummaryEmRequest
+    ) -> FundFlowSectorSummaryEmResponse:
+        frame = self._client.fetch_fund_flow_sector_summary_em(
+            request.symbol,
+            request.indicator,
+        )
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_head(
+            records, request.limit, request.offset
+        )
+        return FundFlowSectorSummaryEmResponse(
+            symbol=request.symbol,
+            indicator=request.indicator,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
     def industry_summary_ths(
         self, request: IndustrySummaryThsRequest
     ) -> IndustrySummaryThsResponse:
@@ -693,7 +821,9 @@ class MarketService:
             end_date=request.end_date,
         )
 
-    def industry_name_em(self, request: IndustryNameEmRequest) -> IndustryNameEmResponse:
+    def industry_name_em(
+        self, request: IndustryNameEmRequest
+    ) -> IndustryNameEmResponse:
         frame = self._client.fetch_industry_name_em()
         columns, records = _build_table_records(frame)
         items, total, count, has_more, next_offset = _paginate_latest(
@@ -710,7 +840,9 @@ class MarketService:
             next_offset=next_offset,
         )
 
-    def industry_spot_em(self, request: IndustrySpotEmRequest) -> IndustrySpotEmResponse:
+    def industry_spot_em(
+        self, request: IndustrySpotEmRequest
+    ) -> IndustrySpotEmResponse:
         frame = self._client.fetch_industry_spot_em(request.symbol)
         columns, records = _build_table_records(frame)
         items, total, count, has_more, next_offset = _paginate_latest(
@@ -728,7 +860,9 @@ class MarketService:
             next_offset=next_offset,
         )
 
-    def industry_cons_em(self, request: IndustryConsEmRequest) -> IndustryConsEmResponse:
+    def industry_cons_em(
+        self, request: IndustryConsEmRequest
+    ) -> IndustryConsEmResponse:
         frame = self._client.fetch_industry_cons_em(request.symbol)
         columns, records = _build_table_records(frame)
         items, total, count, has_more, next_offset = _paginate_latest(
@@ -746,7 +880,9 @@ class MarketService:
             next_offset=next_offset,
         )
 
-    def industry_hist_em(self, request: IndustryHistEmRequest) -> IndustryHistEmResponse:
+    def industry_hist_em(
+        self, request: IndustryHistEmRequest
+    ) -> IndustryHistEmResponse:
         frame = self._client.fetch_industry_hist_em(
             request.symbol,
             request.start_date,

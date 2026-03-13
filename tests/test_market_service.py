@@ -7,6 +7,10 @@ import pandas as pd
 
 from data.client import DateLike
 from models.mcp_tools import (
+    FundFlowIndividualEmRequest,
+    FundFlowIndividualRankEmRequest,
+    FundFlowSectorRankEmRequest,
+    FundFlowSectorSummaryEmRequest,
     FundamentalCnIndicatorsRequest,
     FundamentalUsIndicatorsRequest,
     FundamentalUsReportRequest,
@@ -40,20 +44,20 @@ class FakeClient:
     ) -> pd.DataFrame:
         self.last_period_type = period_type
         self.last_end = end
-        return pd.DataFrame(
-            {
-                "date": ["2024-01-01", "2024-01-02", "2024-01-03"],
-                "open": [10, 11, 12],
-                "high": [11, 12, 13],
-                "low": [9, 10, 11],
-                "close": [10.5, 11.5, 12.5],
-                "volume": [1000, 1100, 1200],
-                "amount": [10000, 11000, 12000],
-                "turnover_rate": [0.1, 0.2, 0.3],
-            }
-        )
+        return pd.DataFrame({
+            "date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+            "open": [10, 11, 12],
+            "high": [11, 12, 13],
+            "low": [9, 10, 11],
+            "close": [10.5, 11.5, 12.5],
+            "volume": [1000, 1100, 1200],
+            "amount": [10000, 11000, 12000],
+            "turnover_rate": [0.1, 0.2, 0.3],
+        })
 
-    def fetch_cn_financial_indicators(self, symbol: str, indicator: str) -> pd.DataFrame:
+    def fetch_cn_financial_indicators(
+        self, symbol: str, indicator: str
+    ) -> pd.DataFrame:
         return pd.DataFrame()
 
     def fetch_us_financial_report(
@@ -61,10 +65,33 @@ class FakeClient:
     ) -> pd.DataFrame:
         return pd.DataFrame()
 
-    def fetch_us_financial_indicators(self, symbol: str, indicator: str) -> pd.DataFrame:
+    def fetch_us_financial_indicators(
+        self, symbol: str, indicator: str
+    ) -> pd.DataFrame:
         return pd.DataFrame()
 
     def fetch_industry_summary_ths(self) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def fetch_fund_flow_individual_em(
+        self,
+        symbol: str,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+    ) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def fetch_fund_flow_individual_rank_em(self, indicator: str) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def fetch_fund_flow_sector_rank_em(
+        self, indicator: str, sector_type: str
+    ) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def fetch_fund_flow_sector_summary_em(
+        self, symbol: str, indicator: str
+    ) -> pd.DataFrame:
         return pd.DataFrame()
 
     def fetch_industry_index_ths(
@@ -94,7 +121,9 @@ class FakeClient:
     ) -> pd.DataFrame:
         return pd.DataFrame()
 
-    def fetch_industry_hist_min_em(self, symbol: str, period: str = "5") -> pd.DataFrame:
+    def fetch_industry_hist_min_em(
+        self, symbol: str, period: str = "5"
+    ) -> pd.DataFrame:
         return pd.DataFrame()
 
 
@@ -113,9 +142,7 @@ class FakeEngine:
     ) -> pd.Series[int]:
         return pd.Series(range(len(series)), index=series.index, name="ma")
 
-    def compute_macd(
-        self, series: pd.Series[Any], **kwargs: object
-    ) -> pd.DataFrame:
+    def compute_macd(self, series: pd.Series[Any], **kwargs: object) -> pd.DataFrame:
         values = list(range(len(series)))
         return pd.DataFrame(
             {
@@ -226,12 +253,10 @@ def test_volume_missing_amount_turnover_defaults_none() -> None:
             period_type: str = "1d",
         ) -> pd.DataFrame:
             self.last_period_type = period_type
-            return pd.DataFrame(
-                {
-                    "date": ["2024-01-01", "2024-01-02"],
-                    "volume": [1000, 1100],
-                }
-            )
+            return pd.DataFrame({
+                "date": ["2024-01-01", "2024-01-02"],
+                "volume": [1000, 1100],
+            })
 
     client = MissingFieldsClient()
     service = MarketService(client, FakeEngine())
@@ -244,46 +269,81 @@ def test_volume_missing_amount_turnover_defaults_none() -> None:
 
 
 class FakeFundamentalClient(FakeClient):
-    def fetch_cn_financial_indicators(self, symbol: str, indicator: str) -> pd.DataFrame:
-        return pd.DataFrame(
-            {
-                "REPORT_DATE": [
-                    "2024-01-01",
-                    "2024-01-02",
-                    "2024-01-03",
-                    "2024-01-04",
-                ],
-                "ROE": [1.0, 2.0, float("nan"), 4.0],
-                "NOTE": ["a", "b", "c", "d"],
-            }
-        )
+    def fetch_cn_financial_indicators(
+        self, symbol: str, indicator: str
+    ) -> pd.DataFrame:
+        return pd.DataFrame({
+            "REPORT_DATE": [
+                "2024-01-01",
+                "2024-01-02",
+                "2024-01-03",
+                "2024-01-04",
+            ],
+            "ROE": [1.0, 2.0, float("nan"), 4.0],
+            "NOTE": ["a", "b", "c", "d"],
+        })
 
     def fetch_us_financial_report(
         self, stock: str, symbol: str, indicator: str
     ) -> pd.DataFrame:
-        return pd.DataFrame(
-            {
-                "REPORT_DATE": ["2023-12-31", "2024-12-31"],
-                "ITEM_NAME": ["Total Assets", "Total Assets"],
-                "AMOUNT": [100.0, 120.0],
-            }
-        )
+        return pd.DataFrame({
+            "REPORT_DATE": ["2023-12-31", "2024-12-31"],
+            "ITEM_NAME": ["Total Assets", "Total Assets"],
+            "AMOUNT": [100.0, 120.0],
+        })
 
-    def fetch_us_financial_indicators(self, symbol: str, indicator: str) -> pd.DataFrame:
-        return pd.DataFrame(
-            {
-                "REPORT_DATE": ["2024-03-31", "2024-06-30"],
-                "ROA": [0.11, 0.12],
-            }
-        )
+    def fetch_us_financial_indicators(
+        self, symbol: str, indicator: str
+    ) -> pd.DataFrame:
+        return pd.DataFrame({
+            "REPORT_DATE": ["2024-03-31", "2024-06-30"],
+            "ROA": [0.11, 0.12],
+        })
 
     def fetch_industry_summary_ths(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            {
-                "板块": ["元件", "小金属", "风电设备"],
-                "涨跌幅": [1.0, 2.0, 3.0],
-            }
-        )
+        return pd.DataFrame({
+            "板块": ["元件", "小金属", "风电设备"],
+            "涨跌幅": [1.0, 2.0, 3.0],
+        })
+
+    def fetch_fund_flow_individual_em(
+        self,
+        symbol: str,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+    ) -> pd.DataFrame:
+        return pd.DataFrame({
+            "日期": ["2024-01-01", "2024-01-03", "2024-01-02"],
+            "收盘价": [10.0, 12.0, 11.0],
+            "主力净流入-净额": [100.0, 300.0, 200.0],
+        })
+
+    def fetch_fund_flow_individual_rank_em(self, indicator: str) -> pd.DataFrame:
+        return pd.DataFrame({
+            "序号": [1, 2, 3],
+            "代码": ["000001", "000002", "000003"],
+            "名称": ["平安银行", "万科A", "国农科技"],
+            f"{indicator}主力净流入-净额": [30.0, 20.0, 10.0],
+        })
+
+    def fetch_fund_flow_sector_rank_em(
+        self, indicator: str, sector_type: str
+    ) -> pd.DataFrame:
+        return pd.DataFrame({
+            "序号": [1, 2, 3],
+            "名称": ["电源设备", "小金属", "元件"],
+            f"{indicator}主力净流入-净额": [300.0, 200.0, 100.0],
+        })
+
+    def fetch_fund_flow_sector_summary_em(
+        self, symbol: str, indicator: str
+    ) -> pd.DataFrame:
+        return pd.DataFrame({
+            "序号": [1, 2, 3],
+            "代码": ["000001", "000002", "000003"],
+            "名称": ["甲", "乙", "丙"],
+            f"{indicator}主力净流入-净额": [10.0, 8.0, 6.0],
+        })
 
     def fetch_industry_index_ths(
         self,
@@ -291,12 +351,10 @@ class FakeFundamentalClient(FakeClient):
         start_date: DateLike | None = None,
         end_date: DateLike | None = None,
     ) -> pd.DataFrame:
-        return pd.DataFrame(
-            {
-                "日期": ["2024-01-01", "2024-01-03", "2024-01-02"],
-                "收盘价": [10.0, 12.0, 11.0],
-            }
-        )
+        return pd.DataFrame({
+            "日期": ["2024-01-01", "2024-01-03", "2024-01-02"],
+            "收盘价": [10.0, 12.0, 11.0],
+        })
 
     def fetch_industry_name_em(self) -> pd.DataFrame:
         return pd.DataFrame({"板块名称": ["元件", "小金属"]})
@@ -305,7 +363,10 @@ class FakeFundamentalClient(FakeClient):
         return pd.DataFrame({"板块名称": [symbol], "最新": [123.4]})
 
     def fetch_industry_cons_em(self, symbol: str) -> pd.DataFrame:
-        return pd.DataFrame({"板块名称": [symbol, symbol], "代码": ["000001", "000002"]})
+        return pd.DataFrame({
+            "板块名称": [symbol, symbol],
+            "代码": ["000001", "000002"],
+        })
 
     def fetch_industry_hist_em(
         self,
@@ -315,20 +376,18 @@ class FakeFundamentalClient(FakeClient):
         period: str = "日k",
         adjust: str = "",
     ) -> pd.DataFrame:
-        return pd.DataFrame(
-            {
-                "日期": ["2024-01-01", "2024-01-03", "2024-01-02"],
-                "收盘": [10.0, 12.0, 11.0],
-            }
-        )
+        return pd.DataFrame({
+            "日期": ["2024-01-01", "2024-01-03", "2024-01-02"],
+            "收盘": [10.0, 12.0, 11.0],
+        })
 
-    def fetch_industry_hist_min_em(self, symbol: str, period: str = "5") -> pd.DataFrame:
-        return pd.DataFrame(
-            {
-                "时间": ["09:35", "09:40", "09:45"],
-                "最新价": [10.0, 10.2, 10.3],
-            }
-        )
+    def fetch_industry_hist_min_em(
+        self, symbol: str, period: str = "5"
+    ) -> pd.DataFrame:
+        return pd.DataFrame({
+            "时间": ["09:35", "09:40", "09:45"],
+            "最新价": [10.0, 10.2, 10.3],
+        })
 
 
 def test_fundamental_cn_indicators_pagination_date_filter_and_nan() -> None:
@@ -352,6 +411,74 @@ def test_fundamental_cn_indicators_pagination_date_filter_and_nan() -> None:
     assert response.columns == ["REPORT_DATE", "ROE", "NOTE"]
     assert response.items[0]["REPORT_DATE"] == "2024-01-02T00:00:00"
     assert response.items[1]["ROE"] is None
+
+
+def test_fund_flow_individual_em_filters_and_uses_latest_pagination() -> None:
+    client = FakeFundamentalClient()
+    service = MarketService(client, FakeEngine())
+    response = service.fund_flow_individual_em(
+        FundFlowIndividualEmRequest(
+            symbol="000001",
+            limit=1,
+            offset=0,
+            start_date="2024-01-02",
+            end_date="2024-01-03",
+        )
+    )
+
+    assert response.symbol == "000001"
+    assert response.total == 2
+    assert response.count == 1
+    assert response.items[0]["日期"] == "2024-01-03T00:00:00"
+
+
+def test_fund_flow_individual_rank_uses_head_pagination() -> None:
+    client = FakeFundamentalClient()
+    service = MarketService(client, FakeEngine())
+    response = service.fund_flow_individual_rank_em(
+        FundFlowIndividualRankEmRequest(indicator="5日", limit=1, offset=1)
+    )
+
+    assert response.indicator == "5日"
+    assert response.total == 3
+    assert response.count == 1
+    assert response.items[0]["代码"] == "000002"
+
+
+def test_fund_flow_sector_rank_uses_head_pagination() -> None:
+    client = FakeFundamentalClient()
+    service = MarketService(client, FakeEngine())
+    response = service.fund_flow_sector_rank_em(
+        FundFlowSectorRankEmRequest(
+            indicator="今日",
+            sector_type="行业资金流",
+            limit=2,
+            offset=0,
+        )
+    )
+
+    assert response.indicator == "今日"
+    assert response.sector_type == "行业资金流"
+    assert response.count == 2
+    assert response.items[0]["名称"] == "电源设备"
+
+
+def test_fund_flow_sector_summary_uses_head_pagination() -> None:
+    client = FakeFundamentalClient()
+    service = MarketService(client, FakeEngine())
+    response = service.fund_flow_sector_summary_em(
+        FundFlowSectorSummaryEmRequest(
+            symbol="电源设备",
+            indicator="今日",
+            limit=1,
+            offset=2,
+        )
+    )
+
+    assert response.symbol == "电源设备"
+    assert response.indicator == "今日"
+    assert response.count == 1
+    assert response.items[0]["代码"] == "000003"
 
 
 def test_fundamental_us_report_fields_and_date_filter() -> None:
