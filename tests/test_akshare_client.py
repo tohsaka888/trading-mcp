@@ -45,10 +45,12 @@ def test_fetch_falls_back_to_tencent_with_normalized_symbol(monkeypatch) -> None
 def test_fetch_falls_back_to_tencent_without_dates(monkeypatch) -> None:
     calls: dict[str, str] = {}
 
-    def fake_hist(
-        *, symbol: str, period: str, start_date: str, end_date: str, adjust: str
-    ):
-        calls["hist"] = symbol
+    def fake_hist(**kwargs):
+        calls["hist"] = kwargs["symbol"]
+        assert kwargs["period"] == "daily"
+        assert kwargs["adjust"] == ""
+        assert "start_date" not in kwargs
+        assert "end_date" not in kwargs
         raise RuntimeError("primary source failed")
 
     def fake_hist_tx(*, symbol: str, start_date: str, end_date: str, adjust: str):
@@ -110,6 +112,46 @@ def test_fetch_cn_tencent_legacy_amount_maps_to_volume(monkeypatch) -> None:
 
     assert frame["volume"].tolist() == [12345.0]
     assert "amount" not in frame.columns
+
+
+def test_fetch_without_dates_omits_dates_for_primary_cn_hist(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_hist(**kwargs):
+        calls["symbol"] = kwargs["symbol"]
+        assert kwargs["period"] == "daily"
+        assert kwargs["adjust"] == ""
+        assert "start_date" not in kwargs
+        assert "end_date" not in kwargs
+        return pd.DataFrame({
+            "日期": ["2024-01-01"],
+            "开盘": [1.0],
+            "收盘": [1.0],
+            "最高": [1.0],
+            "最低": [1.0],
+            "成交量": [100.0],
+            "成交额": [1000.0],
+        })
+
+    monkeypatch.setattr(akshare_client.ak, "stock_zh_a_hist", fake_hist)
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_zh_a_hist_tx",
+        lambda **_: (_ for _ in ()).throw(AssertionError("unexpected fallback")),
+    )
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_cn_tx_extended",
+        lambda self, symbol, start_date, end_date: (_ for _ in ()).throw(
+            AssertionError("unexpected fallback")
+        ),
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch("000001")
+
+    assert calls["symbol"] == "000001"
+    assert not frame.empty
 
 
 def test_fetch_cn_prefers_extended_tencent_frame(monkeypatch) -> None:
@@ -185,6 +227,42 @@ def test_fetch_us_symbol_maps_to_eastmoney_hist(monkeypatch) -> None:
 
     client = akshare_client.AkshareMarketDataClient()
     frame = client.fetch("AAPL.US", "2024-01-01", "2024-01-10")
+
+    assert calls["hist"] == "105.AAPL"
+    assert "daily" not in calls
+    assert not frame.empty
+
+
+def test_fetch_us_symbol_without_dates_omits_dates_for_hist(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_spot_em():
+        return pd.DataFrame({"代码": ["105.AAPL"]})
+
+    def fake_us_hist(**kwargs):
+        calls["hist"] = kwargs["symbol"]
+        assert kwargs["period"] == "daily"
+        assert kwargs["adjust"] == ""
+        assert "start_date" not in kwargs
+        assert "end_date" not in kwargs
+        return pd.DataFrame({
+            "date": ["2024-01-02"],
+            "open": [1.0],
+            "high": [1.0],
+            "low": [1.0],
+            "close": [1.0],
+        })
+
+    def fake_us_daily(*, symbol: str, adjust: str):
+        calls["daily"] = symbol
+        return pd.DataFrame()
+
+    monkeypatch.setattr(akshare_client.ak, "stock_us_spot_em", fake_spot_em)
+    monkeypatch.setattr(akshare_client.ak, "stock_us_hist", fake_us_hist)
+    monkeypatch.setattr(akshare_client.ak, "stock_us_daily", fake_us_daily)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch("AAPL.US")
 
     assert calls["hist"] == "105.AAPL"
     assert "daily" not in calls
@@ -814,6 +892,24 @@ def test_fetch_industry_index_ths_normalizes_dates(monkeypatch) -> None:
     assert not frame.empty
 
 
+def test_fetch_industry_index_ths_without_dates_omits_dates(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_index(**kwargs):
+        calls["symbol"] = kwargs["symbol"]
+        assert "start_date" not in kwargs
+        assert "end_date" not in kwargs
+        return pd.DataFrame({"日期": ["2024-01-01"]})
+
+    monkeypatch.setattr(akshare_client.ak, "stock_board_industry_index_ths", fake_index)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_industry_index_ths("元件")
+
+    assert calls["symbol"] == "元件"
+    assert not frame.empty
+
+
 def test_fetch_industry_name_em(monkeypatch) -> None:
     def fake_name():
         return pd.DataFrame({"板块名称": ["小金属"]})
@@ -900,6 +996,30 @@ def test_fetch_industry_hist_em(monkeypatch) -> None:
         "end_date": "20240131",
         "period": "周k",
         "adjust": "qfq",
+    }
+    assert not frame.empty
+
+
+def test_fetch_industry_hist_em_without_dates_omits_dates(monkeypatch) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_hist(**kwargs):
+        calls["symbol"] = kwargs["symbol"]
+        calls["period"] = kwargs["period"]
+        calls["adjust"] = kwargs["adjust"]
+        assert "start_date" not in kwargs
+        assert "end_date" not in kwargs
+        return pd.DataFrame({"日期": ["2024-01-01"]})
+
+    monkeypatch.setattr(akshare_client.ak, "stock_board_industry_hist_em", fake_hist)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_industry_hist_em("小金属")
+
+    assert calls == {
+        "symbol": "小金属",
+        "period": "日k",
+        "adjust": "",
     }
     assert not frame.empty
 

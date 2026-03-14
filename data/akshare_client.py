@@ -488,6 +488,22 @@ def _to_ak_date(value: DateLike | None) -> str | None:
     raise TypeError(f"Unsupported date type: {type(value)!r}")
 
 
+def _with_optional_ak_dates(
+    params: dict[str, Any],
+    *,
+    start_date: DateLike | None = None,
+    end_date: DateLike | None = None,
+) -> dict[str, Any]:
+    normalized = dict(params)
+    resolved_start = _to_ak_date(start_date)
+    resolved_end = _to_ak_date(end_date)
+    if resolved_start is not None:
+        normalized["start_date"] = resolved_start
+    if resolved_end is not None:
+        normalized["end_date"] = resolved_end
+    return normalized
+
+
 def _resolve_tx_date_range(
     start_date: str | None,
     end_date: str | None,
@@ -925,23 +941,27 @@ class AkshareMarketDataClient:
         used_native_period = False
         if code:
             try:
-                primary_frame = ak.stock_us_hist(
-                    symbol=code,
-                    period=period,
-                    start_date=start_date or "",
-                    end_date=end_date or "",
-                    adjust=self._adjust,
-                )
+                primary_frame = ak.stock_us_hist(**_with_optional_ak_dates(
+                    {
+                        "symbol": code,
+                        "period": period,
+                        "adjust": self._adjust,
+                    },
+                    start_date=start,
+                    end_date=end,
+                ))
                 used_native_period = True
             except TypeError:
                 if period == "daily":
                     try:
-                        primary_frame = ak.stock_us_hist(
-                            symbol=code,
-                            start_date=start_date or "",
-                            end_date=end_date or "",
-                            adjust=self._adjust,
-                        )
+                        primary_frame = ak.stock_us_hist(**_with_optional_ak_dates(
+                            {
+                                "symbol": code,
+                                "adjust": self._adjust,
+                            },
+                            start_date=start,
+                            end_date=end,
+                        ))
                     except Exception as exc:  # pragma: no cover - network/data issues
                         primary_error = exc
                     else:
@@ -1492,11 +1512,11 @@ class AkshareMarketDataClient:
         end_date: DateLike | None = None,
     ) -> pd.DataFrame:
         try:
-            frame = ak.stock_board_industry_index_ths(
-                symbol=symbol.strip(),
-                start_date=_to_ak_date(start_date) or "",
-                end_date=_to_ak_date(end_date) or "",
-            )
+            frame = ak.stock_board_industry_index_ths(**_with_optional_ak_dates(
+                {"symbol": symbol.strip()},
+                start_date=start_date,
+                end_date=end_date,
+            ))
         except Exception as exc:
             raise MarketDataError(
                 "Akshare THS industry index fetch failed "
@@ -1555,13 +1575,15 @@ class AkshareMarketDataClient:
         adjust: str = "",
     ) -> pd.DataFrame:
         try:
-            frame = ak.stock_board_industry_hist_em(
-                symbol=symbol.strip(),
-                start_date=_to_ak_date(start_date) or "",
-                end_date=_to_ak_date(end_date) or "",
-                period=period,
-                adjust=adjust,
-            )
+            frame = ak.stock_board_industry_hist_em(**_with_optional_ak_dates(
+                {
+                    "symbol": symbol.strip(),
+                    "period": period,
+                    "adjust": adjust,
+                },
+                start_date=start_date,
+                end_date=end_date,
+            ))
         except Exception as exc:
             raise MarketDataError(
                 "Akshare EM industry history fetch failed "
@@ -1622,23 +1644,27 @@ class AkshareMarketDataClient:
         primary_frame: pd.DataFrame | None = None
         primary_used_native_period = False
         try:
-            primary_frame = ak.stock_zh_a_hist(
-                symbol=normalized_symbol,
-                period=period,
-                start_date=start_date or "",
-                end_date=end_date or "",
-                adjust=self._adjust,
-            )
+            primary_frame = ak.stock_zh_a_hist(**_with_optional_ak_dates(
+                {
+                    "symbol": normalized_symbol,
+                    "period": period,
+                    "adjust": self._adjust,
+                },
+                start_date=start,
+                end_date=end,
+            ))
             primary_used_native_period = True
         except TypeError:
             if period == "daily":
                 try:
-                    primary_frame = ak.stock_zh_a_hist(
-                        symbol=normalized_symbol,
-                        start_date=start_date or "",
-                        end_date=end_date or "",
-                        adjust=self._adjust,
-                    )
+                    primary_frame = ak.stock_zh_a_hist(**_with_optional_ak_dates(
+                        {
+                            "symbol": normalized_symbol,
+                            "adjust": self._adjust,
+                        },
+                        start_date=start,
+                        end_date=end,
+                    ))
                 except Exception as exc:  # pragma: no cover - network/data issues
                     primary_error = exc
                 else:
