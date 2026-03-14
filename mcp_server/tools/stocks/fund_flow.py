@@ -90,7 +90,9 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
 
     @mcp.tool(
         description=(
-            "Return Eastmoney individual stock fund-flow rankings with pagination metadata. "
+            "Return individual stock fund-flow rankings with pagination metadata. "
+            "Eastmoney is used first and falls back to THS rankings when needed; "
+            "returned columns may differ by source. "
             "indicator enum: '今日', '3日', '5日', '10日'."
         ),
         annotations=context.annotations,
@@ -120,7 +122,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             response = service.fund_flow_individual_rank_em(request)
         except MarketDataError as exc:
             return structured_error_result(
-                f"Error: {exc}. Check the indicator window and Eastmoney network connectivity.",
+                f"Error: {exc}. Check the indicator window and Eastmoney/THS network connectivity.",
                 empty_table_response(
                     FundFlowIndividualRankEmResponse,
                     limit=limit,

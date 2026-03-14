@@ -32,7 +32,9 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
 
     @mcp.tool(
         description=(
-            "Return Eastmoney sector fund-flow rankings with pagination metadata. "
+            "Return sector fund-flow rankings with pagination metadata. "
+            "Eastmoney is used first and industry/concept rankings fall back to THS when needed; "
+            "returned columns may differ by source. "
             "indicator enum: '今日', '5日', '10日'; "
             "sector_type enum: '行业资金流', '概念资金流', '地域资金流'."
         ),
@@ -72,7 +74,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
                     "Error: "
                     f"{exc}. Request failed for indicator={indicator}, "
                     f"sector_type={sector_type}. Check the indicator, sector_type, "
-                    "and Eastmoney network connectivity."
+                    "and Eastmoney/THS network connectivity."
                 ),
                 empty_table_response(
                     FundFlowSectorRankEmResponse,

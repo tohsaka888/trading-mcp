@@ -545,6 +545,228 @@ def test_fetch_fund_flow_individual_em_falls_back_to_eastmoney(monkeypatch) -> N
     assert frame["主力净流入-净额"].tolist() == [200]
 
 
+@pytest.mark.parametrize(
+    ("indicator", "ths_indicator"),
+    [
+        ("今日", "即时"),
+        ("3日", "3日排行"),
+        ("5日", "5日排行"),
+        ("10日", "10日排行"),
+    ],
+)
+def test_fetch_fund_flow_individual_rank_em_falls_back_to_ths(
+    monkeypatch,
+    indicator: str,
+    ths_indicator: str,
+) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_ths_individual(*, symbol: str) -> pd.DataFrame:
+        calls["symbol"] = symbol
+        return pd.DataFrame({
+            "序号": [1],
+            "股票代码": ["1"],
+            "股票简称": ["平安银行"],
+            "最新价": [10.0],
+            "阶段涨跌幅": ["1.2%"],
+            "资金流入净额": ["3.4亿"],
+        })
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_individual_fund_flow_rank",
+        lambda **_: pd.DataFrame(),
+    )
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_clist_pages",
+        lambda self, params: (_ for _ in ()).throw(
+            akshare_client.requests.exceptions.ProxyError(
+                "Unable to connect to proxy"
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_fund_flow_individual",
+        fake_ths_individual,
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_fund_flow_individual_rank_em(indicator)
+
+    assert calls["symbol"] == ths_indicator
+    assert frame.iloc[0]["代码"] == "000001"
+    assert frame.iloc[0]["名称"] == "平安银行"
+
+
+def test_fetch_fund_flow_individual_rank_em_includes_root_causes(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_individual_fund_flow_rank",
+        lambda **_: pd.DataFrame(),
+    )
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_clist_pages",
+        lambda self, params: (_ for _ in ()).throw(
+            akshare_client.requests.exceptions.ProxyError(
+                "Unable to connect to proxy"
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_fund_flow_individual",
+        lambda **_: (_ for _ in ()).throw(RuntimeError("ths unavailable")),
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    with pytest.raises(
+        MarketDataError,
+        match=(
+            "Eastmoney individual fund-flow ranking fetch failed "
+            "for indicator=10日; eastmoney_cause=ProxyError: Unable to connect to proxy; "
+            "ths_cause=MarketDataError: Akshare THS individual fund-flow ranking fetch failed "
+            "for indicator=10日"
+        ),
+    ):
+        client.fetch_fund_flow_individual_rank_em("10日")
+
+
+@pytest.mark.parametrize(
+    ("indicator", "ths_indicator"),
+    [
+        ("今日", "即时"),
+        ("5日", "5日排行"),
+        ("10日", "10日排行"),
+    ],
+)
+def test_fetch_fund_flow_sector_rank_em_industry_falls_back_to_ths(
+    monkeypatch,
+    indicator: str,
+    ths_indicator: str,
+) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_ths_industry(*, symbol: str) -> pd.DataFrame:
+        calls["symbol"] = symbol
+        return pd.DataFrame({
+            "序号": [1],
+            "行业": ["风电设备"],
+            "阶段涨跌幅": ["3.2%"],
+            "净额": [1.5],
+        })
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_sector_fund_flow_rank",
+        lambda **_: pd.DataFrame(),
+    )
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_fund_flow_sector_rank_em_raw",
+        lambda self, indicator, sector_type: (_ for _ in ()).throw(
+            akshare_client.requests.exceptions.ProxyError(
+                "Unable to connect to proxy"
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_fund_flow_industry",
+        fake_ths_industry,
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_fund_flow_sector_rank_em(indicator, "行业资金流")
+
+    assert calls["symbol"] == ths_indicator
+    assert frame.iloc[0]["名称"] == "风电设备"
+
+
+def test_fetch_fund_flow_sector_rank_em_concept_falls_back_to_ths(
+    monkeypatch,
+) -> None:
+    calls: dict[str, str] = {}
+
+    def fake_ths_concept(*, symbol: str) -> pd.DataFrame:
+        calls["symbol"] = symbol
+        return pd.DataFrame({
+            "序号": [1],
+            "行业": ["煤化工概念"],
+            "阶段涨跌幅": ["7.5%"],
+            "净额": [35.83],
+        })
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_sector_fund_flow_rank",
+        lambda **_: pd.DataFrame(),
+    )
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_fund_flow_sector_rank_em_raw",
+        lambda self, indicator, sector_type: (_ for _ in ()).throw(
+            akshare_client.requests.exceptions.ProxyError(
+                "Unable to connect to proxy"
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_fund_flow_concept",
+        fake_ths_concept,
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_fund_flow_sector_rank_em("10日", "概念资金流")
+
+    assert calls["symbol"] == "10日排行"
+    assert frame.iloc[0]["名称"] == "煤化工概念"
+
+
+def test_fetch_fund_flow_sector_rank_em_region_does_not_fall_back_to_ths(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_sector_fund_flow_rank",
+        lambda **_: pd.DataFrame(),
+    )
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_fund_flow_sector_rank_em_raw",
+        lambda self, indicator, sector_type: (_ for _ in ()).throw(
+            akshare_client.requests.exceptions.ProxyError(
+                "Unable to connect to proxy"
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_fund_flow_industry",
+        lambda **_: (_ for _ in ()).throw(AssertionError("unexpected THS fallback")),
+    )
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_fund_flow_concept",
+        lambda **_: (_ for _ in ()).throw(AssertionError("unexpected THS fallback")),
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    with pytest.raises(
+        MarketDataError,
+        match=(
+            "Eastmoney sector fund-flow ranking fetch failed for indicator=今日, "
+            "sector_type=地域资金流; cause=ProxyError: Unable to connect to proxy"
+        ),
+    ):
+        client.fetch_fund_flow_sector_rank_em("今日", "地域资金流")
+
+
 def test_fetch_fund_flow_sector_summary_unknown_board_raises(monkeypatch) -> None:
     class FakeResponse:
         def raise_for_status(self) -> None:

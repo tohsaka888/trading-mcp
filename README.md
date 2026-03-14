@@ -162,6 +162,10 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_fund_flow_sector_rank_em`：东方财富板块资金流排名
   - `indicator` 枚举：`今日`、`5日`、`10日`
   - `sector_type` 枚举：`行业资金流`、`概念资金流`、`地域资金流`
+- 当东方财富排行接口不可用时：
+  - 个股排行会回退到同花顺个股资金流排行
+  - 行业/概念板块排行会回退到同花顺对应排行
+  - 回退后返回列可能不同于东方财富原始列；`地域资金流` 不回退
 - `trading_fund_flow_sector_summary_em`：东方财富指定板块的成份股资金流
   - `symbol` 为东方财富板块名称，如 `电源设备`
   - `indicator` 枚举：`今日`、`5日`、`10日`

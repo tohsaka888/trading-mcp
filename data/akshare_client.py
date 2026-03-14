@@ -34,6 +34,17 @@ _EM_FUND_FLOW_DAY_URL = "https://push2his.eastmoney.com/api/qt/stock/fflow/daykl
 _EM_TIMEOUT_SECONDS = 15.0
 _EM_UT = "b2884a393a59ad64002292a3e90d46a5"
 _EM_BOARD_UT = "8dec03ba335b81bf4ebdf7b29ec27d15"
+_THS_FUND_FLOW_INDIVIDUAL_RANK_MAP = {
+    "今日": "即时",
+    "3日": "3日排行",
+    "5日": "5日排行",
+    "10日": "10日排行",
+}
+_THS_FUND_FLOW_SECTOR_RANK_MAP = {
+    "今日": "即时",
+    "5日": "5日排行",
+    "10日": "10日排行",
+}
 _EM_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -431,6 +442,35 @@ def _expected_columns_present(frame: pd.DataFrame, columns: Iterable[str]) -> bo
         and not frame.empty
         and all(column in frame.columns for column in columns)
     )
+
+
+def _exception_summary(exc: BaseException) -> str:
+    detail = str(exc).strip()
+    if not detail:
+        return exc.__class__.__name__
+    if detail.startswith(f"{exc.__class__.__name__}:"):
+        return detail
+    return f"{exc.__class__.__name__}: {detail}"
+
+
+def _normalize_rank_frame_from_ths(
+    frame: pd.DataFrame | None,
+    rename: dict[str, str],
+    *,
+    code_column: str | None = "代码",
+) -> pd.DataFrame:
+    if frame is None or frame.empty:
+        return pd.DataFrame()
+
+    normalized = frame.rename(columns=rename).reset_index(drop=True)
+    if code_column and code_column in normalized.columns:
+        normalized[code_column] = (
+            normalized[code_column]
+            .astype(str)
+            .str.replace(r"\.0$", "", regex=True)
+            .str.zfill(6)
+        )
+    return normalized
 
 
 def _to_ak_date(value: DateLike | None) -> str | None:
@@ -1107,6 +1147,23 @@ class AkshareMarketDataClient:
         ]
         return self._finalize_rank_frame(payload, config["columns"], numeric_columns)
 
+    def _fetch_fund_flow_individual_rank_ths(self, indicator: str) -> pd.DataFrame:
+        ths_indicator = _THS_FUND_FLOW_INDIVIDUAL_RANK_MAP[indicator]
+        try:
+            frame = ak.stock_fund_flow_individual(symbol=ths_indicator)
+        except Exception as exc:
+            raise MarketDataError(
+                "Akshare THS individual fund-flow ranking fetch failed "
+                f"for indicator={indicator}"
+            ) from exc
+        return _normalize_rank_frame_from_ths(
+            frame,
+            {
+                "股票代码": "代码",
+                "股票简称": "名称",
+            },
+        )
+
     def _fetch_fund_flow_sector_rank_em_raw(
         self,
         indicator: str,
@@ -1154,6 +1211,34 @@ class AkshareMarketDataClient:
             payload,
             config["columns"],
             numeric_columns,
+            code_column=None,
+        )
+
+    def _fetch_fund_flow_sector_rank_ths(
+        self,
+        indicator: str,
+        sector_type: str,
+    ) -> pd.DataFrame:
+        ths_indicator = _THS_FUND_FLOW_SECTOR_RANK_MAP[indicator]
+        fetcher_map = {
+            "行业资金流": ak.stock_fund_flow_industry,
+            "概念资金流": ak.stock_fund_flow_concept,
+        }
+        fetcher = fetcher_map.get(sector_type)
+        if fetcher is None:
+            raise MarketDataError(
+                f"No THS sector fund-flow ranking fallback for sector_type={sector_type}"
+            )
+        try:
+            frame = fetcher(symbol=ths_indicator)
+        except Exception as exc:
+            raise MarketDataError(
+                "Akshare THS sector fund-flow ranking fetch failed "
+                f"for indicator={indicator}, sector_type={sector_type}"
+            ) from exc
+        return _normalize_rank_frame_from_ths(
+            frame,
+            {"行业": "名称"},
             code_column=None,
         )
 
@@ -1328,10 +1413,15 @@ class AkshareMarketDataClient:
         try:
             return self._fetch_fund_flow_individual_rank_em_fallback(indicator)
         except Exception as exc:
-            raise MarketDataError(
-                "Eastmoney individual fund-flow ranking fetch failed "
-                f"for indicator={indicator}"
-            ) from exc
+            try:
+                return self._fetch_fund_flow_individual_rank_ths(indicator)
+            except Exception as ths_exc:
+                raise MarketDataError(
+                    "Eastmoney individual fund-flow ranking fetch failed "
+                    f"for indicator={indicator}; "
+                    f"eastmoney_cause={_exception_summary(exc)}; "
+                    f"ths_cause={_exception_summary(ths_exc)}"
+                ) from ths_exc
 
     def fetch_fund_flow_sector_rank_em(
         self,
@@ -1353,9 +1443,20 @@ class AkshareMarketDataClient:
         try:
             return self._fetch_fund_flow_sector_rank_em_fallback(indicator, sector_type)
         except Exception as exc:
+            if sector_type in {"行业资金流", "概念资金流"}:
+                try:
+                    return self._fetch_fund_flow_sector_rank_ths(indicator, sector_type)
+                except Exception as ths_exc:
+                    raise MarketDataError(
+                        "Eastmoney sector fund-flow ranking fetch failed "
+                        f"for indicator={indicator}, sector_type={sector_type}; "
+                        f"eastmoney_cause={_exception_summary(exc)}; "
+                        f"ths_cause={_exception_summary(ths_exc)}"
+                    ) from ths_exc
             raise MarketDataError(
                 "Eastmoney sector fund-flow ranking fetch failed "
-                f"for indicator={indicator}, sector_type={sector_type}"
+                f"for indicator={indicator}, sector_type={sector_type}; "
+                f"cause={_exception_summary(exc)}"
             ) from exc
 
     def fetch_fund_flow_sector_summary_em(
