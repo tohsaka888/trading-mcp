@@ -7,11 +7,13 @@ import pandas as pd
 
 from data.client import DateLike
 from models.mcp_tools import (
+    BoardChangeEmRequest,
     FundFlowIndividualEmRequest,
     FundFlowIndividualRankEmRequest,
     FundFlowSectorRankEmRequest,
     FundFlowSectorSummaryEmRequest,
     FundamentalCnIndicatorsRequest,
+    InfoGlobalEmRequest,
     FundamentalUsIndicatorsRequest,
     FundamentalUsReportRequest,
     IndustryConsEmRequest,
@@ -105,6 +107,9 @@ class FakeClient:
     def fetch_industry_name_em(self) -> pd.DataFrame:
         return pd.DataFrame()
 
+    def fetch_board_change_em(self) -> pd.DataFrame:
+        return pd.DataFrame()
+
     def fetch_industry_spot_em(self, symbol: str) -> pd.DataFrame:
         return pd.DataFrame()
 
@@ -124,6 +129,9 @@ class FakeClient:
     def fetch_industry_hist_min_em(
         self, symbol: str, period: str = "5"
     ) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def fetch_info_global_em(self) -> pd.DataFrame:
         return pd.DataFrame()
 
 
@@ -359,6 +367,12 @@ class FakeFundamentalClient(FakeClient):
     def fetch_industry_name_em(self) -> pd.DataFrame:
         return pd.DataFrame({"板块名称": ["元件", "小金属"]})
 
+    def fetch_board_change_em(self) -> pd.DataFrame:
+        return pd.DataFrame({
+            "板块名称": ["融资融券", "深股通", "创业板综"],
+            "板块异动总次数": [12, 10, 8],
+        })
+
     def fetch_industry_spot_em(self, symbol: str) -> pd.DataFrame:
         return pd.DataFrame({"板块名称": [symbol], "最新": [123.4]})
 
@@ -387,6 +401,16 @@ class FakeFundamentalClient(FakeClient):
         return pd.DataFrame({
             "时间": ["09:35", "09:40", "09:45"],
             "最新价": [10.0, 10.2, 10.3],
+        })
+
+    def fetch_info_global_em(self) -> pd.DataFrame:
+        return pd.DataFrame({
+            "标题": ["快讯A", "快讯B", "快讯C"],
+            "发布时间": [
+                "2024-03-13 10:00:00",
+                "2024-03-13 09:59:00",
+                "2024-03-13 09:58:00",
+            ],
         })
 
 
@@ -562,6 +586,17 @@ def test_industry_name_em_returns_raw_records() -> None:
     assert response.items[0]["板块名称"] == "元件"
 
 
+def test_board_change_em_pagination() -> None:
+    client = FakeFundamentalClient()
+    service = MarketService(client, FakeEngine())
+    response = service.board_change_em(BoardChangeEmRequest(limit=2, offset=1))
+
+    assert response.total == 3
+    assert response.count == 2
+    assert response.has_more is False
+    assert response.items[0]["板块名称"] == "融资融券"
+
+
 def test_industry_spot_em_returns_symbol_metadata() -> None:
     client = FakeFundamentalClient()
     service = MarketService(client, FakeEngine())
@@ -621,3 +656,15 @@ def test_industry_hist_min_em_pagination() -> None:
     assert response.total == 3
     assert response.count == 1
     assert response.items[0]["时间"] == "09:40"
+
+
+def test_info_global_em_pagination() -> None:
+    client = FakeFundamentalClient()
+    service = MarketService(client, FakeEngine())
+    response = service.info_global_em(InfoGlobalEmRequest(limit=2))
+
+    assert response.total == 3
+    assert response.count == 2
+    assert response.has_more is True
+    assert response.next_offset == 2
+    assert response.items[0]["标题"] == "快讯B"

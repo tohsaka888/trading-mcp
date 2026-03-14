@@ -12,6 +12,8 @@ from mcp_server.metadata import ToolMeta
 from mcp_server.results import error_result, success_result
 from mcp_server.tools.common import ResponseFormat
 from models.mcp_tools import (
+    BoardChangeEmRequest,
+    BoardChangeEmResponse,
     IndustryConsEmRequest,
     IndustryConsEmResponse,
     IndustryNameEmRequest,
@@ -22,6 +24,7 @@ from models.mcp_tools import (
     IndustrySummaryThsResponse,
 )
 from utils.mcp_formatting import (
+    format_board_change_em_response,
     format_industry_cons_em_response,
     format_industry_name_em_response,
     format_industry_spot_em_response,
@@ -80,6 +83,33 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             return error_result(f"Error: {exc}. Check the EM industry board source.")
         return success_result(
             response, response_format, format_industry_name_em_response
+        )
+
+    @mcp.tool(
+        description="Return Eastmoney board change detail records with pagination metadata.",
+        annotations=context.annotations,
+    )
+    def trading_board_change_em(
+        limit: Annotated[
+            int, Field(200, ge=1, description="Number of recent records to return")
+        ] = 200,
+        offset: Annotated[
+            int, Field(0, ge=0, description="Number of most recent records to skip")
+        ] = 0,
+        response_format: Annotated[
+            ResponseFormat,
+            Field("markdown", description="Response format"),
+        ] = "markdown",
+    ) -> Annotated[CallToolResult, BoardChangeEmResponse]:
+        request = BoardChangeEmRequest(limit=limit, offset=offset)
+        try:
+            response = service.board_change_em(request)
+        except MarketDataError as exc:
+            return error_result(
+                f"Error: {exc}. Check the Eastmoney board change source."
+            )
+        return success_result(
+            response, response_format, format_board_change_em_response
         )
 
     @mcp.tool(
@@ -157,6 +187,16 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
                 "response_format='markdown'): return EM industry board name records."
             ),
             resource_description="EM industry board name records",
+            resource_fields=["columns", "items"],
+        ),
+        ToolMeta(
+            name="trading_board_change_em",
+            signature=(
+                "trading_board_change_em(limit=200, offset=0, "
+                "response_format='markdown'): return Eastmoney board change detail "
+                "records."
+            ),
+            resource_description="Eastmoney board change detail records",
             resource_fields=["columns", "items"],
         ),
         ToolMeta(

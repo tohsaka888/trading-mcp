@@ -125,10 +125,12 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_industry_summary_ths(limit=200, offset=0, response_format="markdown")`
 - `trading_industry_index_ths(symbol, limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
 - `trading_industry_name_em(limit=200, offset=0, response_format="markdown")`
+- `trading_board_change_em(limit=200, offset=0, response_format="markdown")`
 - `trading_industry_spot_em(symbol, limit=200, offset=0, response_format="markdown")`
 - `trading_industry_cons_em(symbol, limit=200, offset=0, response_format="markdown")`
 - `trading_industry_hist_em(symbol, period="日k", adjust="none", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
 - `trading_industry_hist_min_em(symbol, period="5", limit=200, offset=0, response_format="markdown")`
+- `trading_info_global_em(limit=200, offset=0, response_format="markdown")`
 
 `trading_fundamental_cn_indicators` 参数说明：
 - `indicator` 枚举：`按报告期`、`按单季度`
@@ -173,6 +175,7 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_industry_summary_ths`：同花顺行业一览表，返回原始板块汇总字段
 - `trading_industry_index_ths`：同花顺行业指数，`symbol` 为板块名，支持 `start_date` / `end_date`
 - `trading_industry_name_em`：东方财富行业板块名称列表
+- `trading_board_change_em`：东方财富当日板块异动详情
 - `trading_industry_spot_em`：东方财富行业板块实时行情，`symbol` 为板块名
 - `trading_industry_cons_em`：东方财富行业板块成份股，`symbol` 为板块名
 - `trading_industry_hist_em`：东方财富行业板块历史行情
@@ -181,6 +184,10 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_industry_hist_min_em`：东方财富行业板块分时历史行情
   - `period` 枚举：`1`、`5`、`15`、`30`、`60`
 - 行业板块结果统一按原始表格返回：`columns + items`
+
+资讯工具说明：
+- `trading_info_global_em`：东方财富全球财经快讯
+- 资讯结果统一按原始表格返回：`columns + items`
 
 **响应结构（structuredContent）**
 

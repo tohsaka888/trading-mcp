@@ -14,6 +14,7 @@ from mcp_server.tools import (
     register_sector_technical_tools,
     register_stock_fund_flow_tools,
     register_stock_fundamental_tools,
+    register_stock_news_tools,
     register_stock_technical_tools,
 )
 from services.market_service import MarketService
@@ -47,6 +48,7 @@ def create_server() -> FastMCP:
     tool_metas: list[ToolMeta] = []
     tool_metas.extend(register_stock_technical_tools(mcp, context))
     tool_metas.extend(register_stock_fund_flow_tools(mcp, context))
+    tool_metas.extend(register_stock_news_tools(mcp, context))
     tool_metas.extend(register_sector_fund_flow_tools(mcp, context))
     tool_metas.extend(register_stock_fundamental_tools(mcp, context))
     tool_metas.extend(register_sector_overview_tools(mcp, context))

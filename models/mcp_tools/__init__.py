@@ -19,6 +19,8 @@ from .sectors.fund_flow import (
     FundFlowSectorSummaryEmResponse,
 )
 from .sectors.overview import (
+    BoardChangeEmRequest,
+    BoardChangeEmResponse,
     IndustryConsEmRequest,
     IndustryConsEmResponse,
     IndustryNameEmRequest,
@@ -50,6 +52,10 @@ from .stocks.fundamental import (
     FundamentalUsReportRequest,
     FundamentalUsReportResponse,
 )
+from .stocks.news import (
+    InfoGlobalEmRequest,
+    InfoGlobalEmResponse,
+)
 from .stocks.technical import (
     KlineRequest,
     KlineResponse,
@@ -64,6 +70,8 @@ from .stocks.technical import (
 )
 
 __all__ = [
+    "BoardChangeEmRequest",
+    "BoardChangeEmResponse",
     "DateRangeRequest",
     "DatedTableResponse",
     "FundFlowIndividualEmRequest",
@@ -95,6 +103,8 @@ __all__ = [
     "IndustrySpotEmResponse",
     "IndustrySummaryThsRequest",
     "IndustrySummaryThsResponse",
+    "InfoGlobalEmRequest",
+    "InfoGlobalEmResponse",
     "KlineBar",
     "KlineRequest",
     "KlineResponse",

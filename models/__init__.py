@@ -1,4 +1,6 @@
 from .mcp_tools import (
+    BoardChangeEmRequest,
+    BoardChangeEmResponse,
     FundFlowIndividualEmRequest,
     FundFlowIndividualEmResponse,
     FundFlowIndividualRankEmRequest,
@@ -27,6 +29,8 @@ from .mcp_tools import (
     IndustrySpotEmResponse,
     IndustrySummaryThsRequest,
     IndustrySummaryThsResponse,
+    InfoGlobalEmRequest,
+    InfoGlobalEmResponse,
     KlineBar,
     KlineRequest,
     KlineResponse,
@@ -45,6 +49,8 @@ from .mcp_tools import (
 )
 
 __all__ = [
+    "BoardChangeEmRequest",
+    "BoardChangeEmResponse",
     "FundFlowIndividualEmRequest",
     "FundFlowIndividualEmResponse",
     "FundFlowIndividualRankEmRequest",
@@ -73,6 +79,8 @@ __all__ = [
     "IndustrySpotEmResponse",
     "IndustrySummaryThsRequest",
     "IndustrySummaryThsResponse",
+    "InfoGlobalEmRequest",
+    "InfoGlobalEmResponse",
     "KlineBar",
     "KlineRequest",
     "KlineResponse",

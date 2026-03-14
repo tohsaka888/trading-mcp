@@ -604,6 +604,18 @@ def test_fetch_industry_name_em(monkeypatch) -> None:
     assert frame["板块名称"].tolist() == ["小金属"]
 
 
+def test_fetch_board_change_em(monkeypatch) -> None:
+    def fake_board_change():
+        return pd.DataFrame({"板块名称": ["融资融券"]})
+
+    monkeypatch.setattr(akshare_client.ak, "stock_board_change_em", fake_board_change)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_board_change_em()
+
+    assert frame["板块名称"].tolist() == ["融资融券"]
+
+
 def test_fetch_industry_spot_em(monkeypatch) -> None:
     calls: dict[str, str] = {}
 
@@ -702,3 +714,39 @@ def test_fetch_industry_summary_ths_wraps_error(monkeypatch) -> None:
     client = akshare_client.AkshareMarketDataClient()
     with pytest.raises(MarketDataError):
         client.fetch_industry_summary_ths()
+
+
+def test_fetch_board_change_em_wraps_error(monkeypatch) -> None:
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_board_change_em",
+        lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    with pytest.raises(MarketDataError):
+        client.fetch_board_change_em()
+
+
+def test_fetch_info_global_em(monkeypatch) -> None:
+    def fake_info_global():
+        return pd.DataFrame({"标题": ["快讯A"]})
+
+    monkeypatch.setattr(akshare_client.ak, "stock_info_global_em", fake_info_global)
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_info_global_em()
+
+    assert frame["标题"].tolist() == ["快讯A"]
+
+
+def test_fetch_info_global_em_wraps_error(monkeypatch) -> None:
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_info_global_em",
+        lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    with pytest.raises(MarketDataError):
+        client.fetch_info_global_em()

@@ -13,6 +13,10 @@ class IndustryNameEmRequest(TableRequest):
     pass
 
 
+class BoardChangeEmRequest(TableRequest):
+    pass
+
+
 class IndustrySpotEmRequest(TableRequest):
     symbol: str = Field(..., min_length=1, description="EM industry board symbol")
 
@@ -26,6 +30,10 @@ class IndustrySummaryThsResponse(TableResponse):
 
 
 class IndustryNameEmResponse(TableResponse):
+    pass
+
+
+class BoardChangeEmResponse(TableResponse):
     pass
 
 

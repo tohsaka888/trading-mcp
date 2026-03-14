@@ -1414,6 +1414,15 @@ class AkshareMarketDataClient:
             return pd.DataFrame()
         return frame
 
+    def fetch_board_change_em(self) -> pd.DataFrame:
+        try:
+            frame = ak.stock_board_change_em()
+        except Exception as exc:
+            raise MarketDataError("Akshare board change fetch failed") from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
     def fetch_industry_spot_em(self, symbol: str) -> pd.DataFrame:
         try:
             frame = ak.stock_board_industry_spot_em(symbol=symbol.strip())
@@ -1476,6 +1485,15 @@ class AkshareMarketDataClient:
                 "Akshare EM industry intraday history fetch failed "
                 f"for symbol={symbol}, period={period}"
             ) from exc
+        if frame is None:
+            return pd.DataFrame()
+        return frame
+
+    def fetch_info_global_em(self) -> pd.DataFrame:
+        try:
+            frame = ak.stock_info_global_em()
+        except Exception as exc:
+            raise MarketDataError("Akshare global finance news fetch failed") from exc
         if frame is None:
             return pd.DataFrame()
         return frame

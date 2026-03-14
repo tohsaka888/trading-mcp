@@ -111,6 +111,11 @@ class MarketDataClient(Protocol):
 
         raise NotImplementedError
 
+    def fetch_board_change_em(self) -> pd.DataFrame:
+        """Return Eastmoney board change detail records."""
+
+        raise NotImplementedError
+
     def fetch_industry_spot_em(self, symbol: str) -> pd.DataFrame:
         """Return EM industry board spot records."""
 
@@ -139,5 +144,10 @@ class MarketDataClient(Protocol):
         period: str = "5",
     ) -> pd.DataFrame:
         """Return EM industry board intraday historical records."""
+
+        raise NotImplementedError
+
+    def fetch_info_global_em(self) -> pd.DataFrame:
+        """Return Eastmoney global finance news records."""
 
         raise NotImplementedError

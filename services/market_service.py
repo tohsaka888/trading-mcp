@@ -10,6 +10,8 @@ import talib
 
 from data.client import MarketDataClient, MarketDataError
 from models.mcp_tools import (
+    BoardChangeEmRequest,
+    BoardChangeEmResponse,
     FundFlowIndividualEmRequest,
     FundFlowIndividualEmResponse,
     FundFlowIndividualRankEmRequest,
@@ -38,6 +40,8 @@ from models.mcp_tools import (
     IndustrySpotEmResponse,
     IndustrySummaryThsRequest,
     IndustrySummaryThsResponse,
+    InfoGlobalEmRequest,
+    InfoGlobalEmResponse,
     KlineBar,
     KlineRequest,
     KlineResponse,
@@ -840,6 +844,25 @@ class MarketService:
             next_offset=next_offset,
         )
 
+    def board_change_em(
+        self, request: BoardChangeEmRequest
+    ) -> BoardChangeEmResponse:
+        frame = self._client.fetch_board_change_em()
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return BoardChangeEmResponse(
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
     def industry_spot_em(
         self, request: IndustrySpotEmRequest
     ) -> IndustrySpotEmResponse:
@@ -925,6 +948,25 @@ class MarketService:
         return IndustryHistMinEmResponse(
             symbol=request.symbol,
             period=request.period,
+            items=items,
+            columns=columns,
+            count=count,
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            has_more=has_more,
+            next_offset=next_offset,
+        )
+
+    def info_global_em(
+        self, request: InfoGlobalEmRequest
+    ) -> InfoGlobalEmResponse:
+        frame = self._client.fetch_info_global_em()
+        columns, records = _build_table_records(frame)
+        items, total, count, has_more, next_offset = _paginate_latest(
+            records, request.limit, request.offset
+        )
+        return InfoGlobalEmResponse(
             items=items,
             columns=columns,
             count=count,

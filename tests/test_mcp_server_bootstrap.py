@@ -6,6 +6,7 @@ import json
 from mcp_server import create_server
 
 EXPECTED_TOOL_NAMES = {
+    "trading_board_change_em",
     "trading_fund_flow_individual_em",
     "trading_fund_flow_individual_rank_em",
     "trading_fund_flow_sector_rank_em",
@@ -13,6 +14,7 @@ EXPECTED_TOOL_NAMES = {
     "trading_fundamental_cn_indicators",
     "trading_fundamental_us_indicators",
     "trading_fundamental_us_report",
+    "trading_info_global_em",
     "trading_industry_cons_em",
     "trading_industry_hist_em",
     "trading_industry_hist_min_em",
@@ -42,11 +44,13 @@ EXPECTED_TOOL_SIGNATURES = [
     "trading_fundamental_us_indicators(symbol, indicator='年报', limit=200, offset=0, start_date=None, end_date=None, response_format='markdown'): return US fundamental indicators (raw records).",
     "trading_industry_summary_ths(limit=200, offset=0, response_format='markdown'): return THS industry board summary records.",
     "trading_industry_name_em(limit=200, offset=0, response_format='markdown'): return EM industry board name records.",
+    "trading_board_change_em(limit=200, offset=0, response_format='markdown'): return Eastmoney board change detail records.",
     "trading_industry_spot_em(symbol, limit=200, offset=0, response_format='markdown'): return EM industry board spot records.",
     "trading_industry_cons_em(symbol, limit=200, offset=0, response_format='markdown'): return EM industry board constituent records.",
     "trading_industry_index_ths(symbol, limit=200, offset=0, start_date=None, end_date=None, response_format='markdown'): return THS industry index records.",
     "trading_industry_hist_em(symbol, period='日k', adjust='none', limit=200, offset=0, start_date=None, end_date=None, response_format='markdown'): return EM industry historical K-line records.",
     "trading_industry_hist_min_em(symbol, period='5', limit=200, offset=0, response_format='markdown'): return EM industry intraday history records.",
+    "trading_info_global_em(limit=200, offset=0, response_format='markdown'): return Eastmoney global finance news records.",
 ]
 
 EXPECTED_RESOURCE_FIELDS = {
@@ -96,6 +100,7 @@ EXPECTED_RESOURCE_FIELDS = {
     ],
     "trading_industry_summary_ths": ["columns", "items"],
     "trading_industry_name_em": ["columns", "items"],
+    "trading_board_change_em": ["columns", "items"],
     "trading_industry_spot_em": ["columns", "items", "symbol"],
     "trading_industry_cons_em": ["columns", "items", "symbol"],
     "trading_industry_index_ths": [
@@ -115,6 +120,7 @@ EXPECTED_RESOURCE_FIELDS = {
         "end_date",
     ],
     "trading_industry_hist_min_em": ["columns", "items", "symbol", "period"],
+    "trading_info_global_em": ["columns", "items"],
 }
 
 

@@ -4,11 +4,13 @@ from pydantic import ValidationError
 from datetime import date, datetime
 
 from models.mcp_tools import (
+    BoardChangeEmRequest,
     FundFlowIndividualEmRequest,
     FundFlowIndividualRankEmRequest,
     FundFlowSectorRankEmRequest,
     FundFlowSectorSummaryEmRequest,
     FundamentalCnIndicatorsRequest,
+    InfoGlobalEmRequest,
     FundamentalUsIndicatorsRequest,
     FundamentalUsReportRequest,
     IndustryHistEmRequest,
@@ -121,6 +123,12 @@ def test_fund_flow_individual_request_defaults() -> None:
     assert request.start_date is None
 
 
+def test_board_change_request_defaults() -> None:
+    request = BoardChangeEmRequest()
+    assert request.limit == 200
+    assert request.offset == 0
+
+
 def test_fund_flow_individual_date_validation() -> None:
     request = FundFlowIndividualEmRequest(
         symbol="000001",
@@ -223,3 +231,9 @@ def test_industry_hist_min_defaults() -> None:
     request = IndustryHistMinEmRequest(symbol="小金属")
     assert request.period == "5"
     assert request.limit == 200
+
+
+def test_info_global_request_defaults() -> None:
+    request = InfoGlobalEmRequest()
+    assert request.limit == 200
+    assert request.offset == 0
