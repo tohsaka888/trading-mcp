@@ -9,7 +9,11 @@ from pydantic import Field
 
 from mcp_server.context import ServerContext
 from mcp_server.metadata import ToolMeta
-from mcp_server.results import error_result, success_result
+from mcp_server.results import (
+    empty_table_response,
+    structured_error_result,
+    success_result,
+)
 from mcp_server.tools.common import ResponseFormat
 from models.mcp_tools import (
     FundFlowSectorRankEmRequest,
@@ -63,7 +67,21 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.fund_flow_sector_rank_em(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the indicator and sector_type.")
+            return structured_error_result(
+                (
+                    "Error: "
+                    f"{exc}. Request failed for indicator={indicator}, "
+                    f"sector_type={sector_type}. Check the indicator, sector_type, "
+                    "and Eastmoney network connectivity."
+                ),
+                empty_table_response(
+                    FundFlowSectorRankEmResponse,
+                    limit=limit,
+                    offset=offset,
+                    indicator=indicator,
+                    sector_type=sector_type,
+                ),
+            )
         return success_result(
             response, response_format, format_fund_flow_sector_rank_em_response
         )
@@ -104,7 +122,16 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.fund_flow_sector_summary_em(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the board symbol and indicator.")
+            return structured_error_result(
+                f"Error: {exc}. Check the board symbol, indicator, and Eastmoney network connectivity.",
+                empty_table_response(
+                    FundFlowSectorSummaryEmResponse,
+                    limit=limit,
+                    offset=offset,
+                    symbol=symbol,
+                    indicator=indicator,
+                ),
+            )
         return success_result(
             response, response_format, format_fund_flow_sector_summary_em_response
         )

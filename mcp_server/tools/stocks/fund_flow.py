@@ -9,7 +9,11 @@ from pydantic import Field
 
 from mcp_server.context import ServerContext
 from mcp_server.metadata import ToolMeta
-from mcp_server.results import error_result, success_result
+from mcp_server.results import (
+    empty_table_response,
+    structured_error_result,
+    success_result,
+)
 from mcp_server.tools.common import ResponseFormat
 from models.mcp_tools import (
     FundFlowIndividualEmRequest,
@@ -69,8 +73,16 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.fund_flow_individual_em(request)
         except MarketDataError as exc:
-            return error_result(
-                f"Error: {exc}. Check the A-share symbol and date range."
+            return structured_error_result(
+                f"Error: {exc}. Check the A-share symbol, date range, and Eastmoney network connectivity.",
+                empty_table_response(
+                    FundFlowIndividualEmResponse,
+                    limit=limit,
+                    offset=offset,
+                    start_date=start_date,
+                    end_date=end_date,
+                    symbol=symbol,
+                ),
             )
         return success_result(
             response, response_format, format_fund_flow_individual_em_response
@@ -107,7 +119,15 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.fund_flow_individual_rank_em(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the indicator window.")
+            return structured_error_result(
+                f"Error: {exc}. Check the indicator window and Eastmoney network connectivity.",
+                empty_table_response(
+                    FundFlowIndividualRankEmResponse,
+                    limit=limit,
+                    offset=offset,
+                    indicator=indicator,
+                ),
+            )
         return success_result(
             response, response_format, format_fund_flow_individual_rank_em_response
         )

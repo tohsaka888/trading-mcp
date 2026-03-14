@@ -9,7 +9,11 @@ from pydantic import Field
 
 from mcp_server.context import ServerContext
 from mcp_server.metadata import ToolMeta
-from mcp_server.results import error_result, success_result
+from mcp_server.results import (
+    empty_table_response,
+    structured_error_result,
+    success_result,
+)
 from mcp_server.tools.common import ResponseFormat
 from models.mcp_tools import (
     IndustryHistEmRequest,
@@ -68,7 +72,17 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.industry_index_ths(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the board symbol and date range.")
+            return structured_error_result(
+                f"Error: {exc}. Check the board symbol, date range, and upstream connectivity.",
+                empty_table_response(
+                    IndustryIndexThsResponse,
+                    limit=limit,
+                    offset=offset,
+                    start_date=start_date,
+                    end_date=end_date,
+                    symbol=symbol,
+                ),
+            )
         return success_result(
             response, response_format, format_industry_index_ths_response
         )
@@ -123,8 +137,18 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.industry_hist_em(request)
         except MarketDataError as exc:
-            return error_result(
-                f"Error: {exc}. Check the board symbol, date range and adjust option."
+            return structured_error_result(
+                f"Error: {exc}. Check the board symbol, date range, adjust option, and upstream connectivity.",
+                empty_table_response(
+                    IndustryHistEmResponse,
+                    limit=limit,
+                    offset=offset,
+                    start_date=start_date,
+                    end_date=end_date,
+                    symbol=symbol,
+                    period=period,
+                    adjust="" if adjust == "none" else adjust,
+                ),
             )
         return success_result(
             response, response_format, format_industry_hist_em_response
@@ -166,7 +190,16 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.industry_hist_min_em(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the board symbol and period.")
+            return structured_error_result(
+                f"Error: {exc}. Check the board symbol, period, and upstream connectivity.",
+                empty_table_response(
+                    IndustryHistMinEmResponse,
+                    limit=limit,
+                    offset=offset,
+                    symbol=symbol,
+                    period=period,
+                ),
+            )
         return success_result(
             response, response_format, format_industry_hist_min_em_response
         )

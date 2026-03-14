@@ -9,7 +9,11 @@ from pydantic import Field
 
 from mcp_server.context import ServerContext
 from mcp_server.metadata import ToolMeta
-from mcp_server.results import error_result, success_result
+from mcp_server.results import (
+    empty_table_response,
+    structured_error_result,
+    success_result,
+)
 from mcp_server.tools.common import ResponseFormat
 from models.mcp_tools import (
     BoardChangeEmRequest,
@@ -55,7 +59,14 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.industry_summary_ths(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the THS industry summary source.")
+            return structured_error_result(
+                f"Error: {exc}. Check the THS industry summary source and upstream connectivity.",
+                empty_table_response(
+                    IndustrySummaryThsResponse,
+                    limit=limit,
+                    offset=offset,
+                ),
+            )
         return success_result(
             response, response_format, format_industry_summary_ths_response
         )
@@ -80,7 +91,14 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.industry_name_em(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the EM industry board source.")
+            return structured_error_result(
+                f"Error: {exc}. Check the EM industry board source and upstream connectivity.",
+                empty_table_response(
+                    IndustryNameEmResponse,
+                    limit=limit,
+                    offset=offset,
+                ),
+            )
         return success_result(
             response, response_format, format_industry_name_em_response
         )
@@ -105,8 +123,13 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.board_change_em(request)
         except MarketDataError as exc:
-            return error_result(
-                f"Error: {exc}. Check the Eastmoney board change source."
+            return structured_error_result(
+                f"Error: {exc}. Check the Eastmoney board change source and upstream connectivity.",
+                empty_table_response(
+                    BoardChangeEmResponse,
+                    limit=limit,
+                    offset=offset,
+                ),
             )
         return success_result(
             response, response_format, format_board_change_em_response
@@ -136,7 +159,15 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.industry_spot_em(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the board symbol.")
+            return structured_error_result(
+                f"Error: {exc}. Check the board symbol and upstream connectivity.",
+                empty_table_response(
+                    IndustrySpotEmResponse,
+                    limit=limit,
+                    offset=offset,
+                    symbol=symbol,
+                ),
+            )
         return success_result(
             response, response_format, format_industry_spot_em_response
         )
@@ -165,7 +196,15 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.industry_cons_em(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the board symbol.")
+            return structured_error_result(
+                f"Error: {exc}. Check the board symbol and upstream connectivity.",
+                empty_table_response(
+                    IndustryConsEmResponse,
+                    limit=limit,
+                    offset=offset,
+                    symbol=symbol,
+                ),
+            )
         return success_result(
             response, response_format, format_industry_cons_em_response
         )

@@ -9,7 +9,11 @@ from pydantic import Field
 
 from mcp_server.context import ServerContext
 from mcp_server.metadata import ToolMeta
-from mcp_server.results import error_result, success_result
+from mcp_server.results import (
+    empty_table_response,
+    structured_error_result,
+    success_result,
+)
 from mcp_server.tools.common import ResponseFormat
 from models.mcp_tools import (
     FundamentalCnIndicatorsRequest,
@@ -77,7 +81,18 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.fundamental_cn_indicators(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check the symbol and indicator.")
+            return structured_error_result(
+                f"Error: {exc}. Check the symbol, indicator, and upstream connectivity.",
+                empty_table_response(
+                    FundamentalCnIndicatorsResponse,
+                    limit=limit,
+                    offset=offset,
+                    start_date=start_date,
+                    end_date=end_date,
+                    symbol=symbol,
+                    indicator=indicator,
+                ),
+            )
         return success_result(
             response, response_format, format_fundamental_cn_indicators_response
         )
@@ -135,7 +150,19 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.fundamental_us_report(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check stock, symbol and indicator.")
+            return structured_error_result(
+                f"Error: {exc}. Check stock, symbol, indicator, and upstream connectivity.",
+                empty_table_response(
+                    FundamentalUsReportResponse,
+                    limit=limit,
+                    offset=offset,
+                    start_date=start_date,
+                    end_date=end_date,
+                    stock=stock,
+                    symbol=symbol,
+                    indicator=indicator,
+                ),
+            )
         return success_result(
             response, response_format, format_fundamental_us_report_response
         )
@@ -188,7 +215,18 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.fundamental_us_indicators(request)
         except MarketDataError as exc:
-            return error_result(f"Error: {exc}. Check symbol and indicator.")
+            return structured_error_result(
+                f"Error: {exc}. Check symbol, indicator, and upstream connectivity.",
+                empty_table_response(
+                    FundamentalUsIndicatorsResponse,
+                    limit=limit,
+                    offset=offset,
+                    start_date=start_date,
+                    end_date=end_date,
+                    symbol=symbol,
+                    indicator=indicator,
+                ),
+            )
         return success_result(
             response, response_format, format_fundamental_us_indicators_response
         )

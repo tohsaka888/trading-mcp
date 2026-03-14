@@ -9,7 +9,11 @@ from pydantic import Field
 
 from mcp_server.context import ServerContext
 from mcp_server.metadata import ToolMeta
-from mcp_server.results import error_result, success_result
+from mcp_server.results import (
+    empty_table_response,
+    structured_error_result,
+    success_result,
+)
 from mcp_server.tools.common import ResponseFormat
 from models.mcp_tools import InfoGlobalEmRequest, InfoGlobalEmResponse
 from utils.mcp_formatting import format_info_global_em_response
@@ -38,8 +42,13 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.info_global_em(request)
         except MarketDataError as exc:
-            return error_result(
-                f"Error: {exc}. Check the Eastmoney global news source."
+            return structured_error_result(
+                f"Error: {exc}. Check the Eastmoney global news source and upstream connectivity.",
+                empty_table_response(
+                    InfoGlobalEmResponse,
+                    limit=limit,
+                    offset=offset,
+                ),
             )
         return success_result(
             response, response_format, format_info_global_em_response

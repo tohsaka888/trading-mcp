@@ -10,7 +10,11 @@ from pydantic import Field
 
 from mcp_server.context import ServerContext
 from mcp_server.metadata import ToolMeta
-from mcp_server.results import error_result, success_result
+from mcp_server.results import (
+    empty_tool_response,
+    structured_error_result,
+    success_result,
+)
 from mcp_server.tools.common import PeriodType, ResponseFormat
 from models.mcp_tools import (
     KlineRequest,
@@ -87,7 +91,18 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.kline(request)
         except (MarketDataError, IndicatorError) as exc:
-            return error_result(f"Error: {exc}. Check the symbol and date range.")
+            return structured_error_result(
+                f"Error: {exc}. Check the symbol, date range, and upstream connectivity.",
+                empty_tool_response(
+                    KlineResponse,
+                    symbol=symbol,
+                    limit=limit,
+                    offset=offset,
+                    period_type=period_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                ),
+            )
         return success_result(response, response_format, format_kline_response)
 
     @mcp.tool(
@@ -141,7 +156,21 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.volume(request)
         except (MarketDataError, IndicatorError) as exc:
-            return error_result(f"Error: {exc}. Check the symbol and date range.")
+            return structured_error_result(
+                f"Error: {exc}. Check the symbol, date range, and upstream connectivity.",
+                empty_tool_response(
+                    VolumeResponse,
+                    symbol=symbol,
+                    limit=limit,
+                    offset=offset,
+                    period_type=period_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                    volume_unit="lot",
+                    amount_unit=None,
+                    turnover_rate_unit="percent",
+                ),
+            )
         return success_result(response, response_format, format_volume_response)
 
     @mcp.tool(
@@ -197,7 +226,18 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.rsi(request)
         except (MarketDataError, IndicatorError) as exc:
-            return error_result(f"Error: {exc}. Check the symbol and date range.")
+            return structured_error_result(
+                f"Error: {exc}. Check the symbol, date range, and upstream connectivity.",
+                empty_tool_response(
+                    RsiResponse,
+                    symbol=symbol,
+                    limit=limit,
+                    offset=offset,
+                    period_type=period_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                ),
+            )
         return success_result(response, response_format, format_rsi_response)
 
     @mcp.tool(
@@ -257,7 +297,18 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.ma(request)
         except (MarketDataError, IndicatorError) as exc:
-            return error_result(f"Error: {exc}. Check the symbol and date range.")
+            return structured_error_result(
+                f"Error: {exc}. Check the symbol, date range, and upstream connectivity.",
+                empty_tool_response(
+                    MaResponse,
+                    symbol=symbol,
+                    limit=limit,
+                    offset=offset,
+                    period_type=period_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                ),
+            )
         return success_result(response, response_format, format_ma_response)
 
     @mcp.tool(
@@ -323,7 +374,18 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         try:
             response = service.macd(request)
         except (MarketDataError, IndicatorError) as exc:
-            return error_result(f"Error: {exc}. Check the symbol and date range.")
+            return structured_error_result(
+                f"Error: {exc}. Check the symbol, date range, and upstream connectivity.",
+                empty_tool_response(
+                    MacdResponse,
+                    symbol=symbol,
+                    limit=limit,
+                    offset=offset,
+                    period_type=period_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                ),
+            )
         return success_result(response, response_format, format_macd_response)
 
     return [
