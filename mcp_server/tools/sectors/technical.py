@@ -46,8 +46,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field(..., min_length=1, description="THS industry board symbol"),
         ],
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -109,8 +109,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field("none", description="Adjust type; use 'none' for no adjustment"),
         ] = "none",
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -171,8 +171,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field("5", description="Minute period"),
         ] = "5",
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -208,7 +208,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_industry_index_ths",
             signature=(
-                "trading_industry_index_ths(symbol, limit=200, offset=0, "
+                "trading_industry_index_ths(symbol, limit=30, offset=0, "
                 "start_date=None, end_date=None, response_format='markdown'): "
                 "return THS industry index records."
             ),
@@ -219,7 +219,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             name="trading_industry_hist_em",
             signature=(
                 "trading_industry_hist_em(symbol, period='日k', adjust='none', "
-                "limit=200, offset=0, start_date=None, end_date=None, "
+                "limit=30, offset=0, start_date=None, end_date=None, "
                 "response_format='markdown'): return EM industry historical K-line "
                 "records."
             ),
@@ -237,7 +237,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_industry_hist_min_em",
             signature=(
-                "trading_industry_hist_min_em(symbol, period='5', limit=200, "
+                "trading_industry_hist_min_em(symbol, period='5', limit=30, "
                 "offset=0, response_format='markdown'): return EM industry intraday "
                 "history records."
             ),

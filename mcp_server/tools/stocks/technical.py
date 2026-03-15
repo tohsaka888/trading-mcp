@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated
 
 from data.client import MarketDataError
 from indicators.engine import IndicatorError
@@ -122,8 +122,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             ),
         ],
         limit: Annotated[
-            int, Field(..., ge=1, description="Number of recent data points to return")
-        ],
+            int, Field(30, ge=1, description="Number of recent data points to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent points to skip")
         ] = 0,
@@ -190,8 +190,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             ),
         ],
         limit: Annotated[
-            int, Field(..., ge=1, description="Number of recent data points to return")
-        ],
+            int, Field(30, ge=1, description="Number of recent data points to return")
+        ] = 30,
         period: Annotated[int, Field(14, ge=1, description="RSI lookback period")] = 14,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent points to skip")
@@ -257,8 +257,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             ),
         ],
         limit: Annotated[
-            int, Field(..., ge=1, description="Number of recent data points to return")
-        ],
+            int, Field(30, ge=1, description="Number of recent data points to return")
+        ] = 30,
         period: Annotated[int, Field(20, ge=1, description="MA lookback period")] = 20,
         ma_type: Annotated[
             str, Field("sma", description="Moving average type: sma or ema")
@@ -328,8 +328,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             ),
         ],
         limit: Annotated[
-            int, Field(..., ge=1, description="Number of recent data points to return")
-        ],
+            int, Field(30, ge=1, description="Number of recent data points to return")
+        ] = 30,
         fast_period: Annotated[
             int, Field(12, ge=1, description="MACD fast EMA period")
         ] = 12,
@@ -402,7 +402,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_macd",
             signature=(
-                "trading_macd(symbol, limit, fast_period=12, slow_period=26, "
+                "trading_macd(symbol, limit=30, fast_period=12, slow_period=26, "
                 "signal_period=9, offset=0, period_type='1d', start_date=None, "
                 "end_date=None, response_format='markdown'): return MACD, signal, "
                 "histogram values."
@@ -413,7 +413,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_volume",
             signature=(
-                "trading_volume(symbol, limit, offset=0, period_type='1d', "
+                "trading_volume(symbol, limit=30, offset=0, period_type='1d', "
                 "start_date=None, end_date=None, response_format='markdown'): "
                 "return volume, amount, turnover_rate values."
             ),
@@ -423,7 +423,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_rsi",
             signature=(
-                "trading_rsi(symbol, limit, period=14, offset=0, period_type='1d', "
+                "trading_rsi(symbol, limit=30, period=14, offset=0, period_type='1d', "
                 "start_date=None, end_date=None, response_format='markdown'): "
                 "return RSI values."
             ),
@@ -433,7 +433,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_ma",
             signature=(
-                "trading_ma(symbol, limit, period=20, ma_type='sma', offset=0, "
+                "trading_ma(symbol, limit=30, period=20, ma_type='sma', offset=0, "
                 "period_type='1d', start_date=None, end_date=None, "
                 "response_format='markdown'): return moving average values."
             ),

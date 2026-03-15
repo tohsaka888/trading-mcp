@@ -45,8 +45,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
     )
     def trading_industry_summary_ths(
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -77,8 +77,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
     )
     def trading_industry_name_em(
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -109,8 +109,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
     )
     def trading_board_change_em(
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -145,8 +145,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field(..., min_length=1, description="EM industry board symbol"),
         ],
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -182,8 +182,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field(..., min_length=1, description="EM industry board symbol"),
         ],
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -213,7 +213,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_industry_summary_ths",
             signature=(
-                "trading_industry_summary_ths(limit=200, offset=0, "
+                "trading_industry_summary_ths(limit=30, offset=0, "
                 "response_format='markdown'): return THS industry board summary records."
             ),
             resource_description="THS industry board summary records",
@@ -222,7 +222,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_industry_name_em",
             signature=(
-                "trading_industry_name_em(limit=200, offset=0, "
+                "trading_industry_name_em(limit=30, offset=0, "
                 "response_format='markdown'): return EM industry board name records."
             ),
             resource_description="EM industry board name records",
@@ -231,7 +231,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_board_change_em",
             signature=(
-                "trading_board_change_em(limit=200, offset=0, "
+                "trading_board_change_em(limit=30, offset=0, "
                 "response_format='markdown'): return Eastmoney board change detail "
                 "records."
             ),
@@ -241,7 +241,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_industry_spot_em",
             signature=(
-                "trading_industry_spot_em(symbol, limit=200, offset=0, "
+                "trading_industry_spot_em(symbol, limit=30, offset=0, "
                 "response_format='markdown'): return EM industry board spot records."
             ),
             resource_description="EM industry board spot records",
@@ -250,7 +250,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_industry_cons_em",
             signature=(
-                "trading_industry_cons_em(symbol, limit=200, offset=0, "
+                "trading_industry_cons_em(symbol, limit=30, offset=0, "
                 "response_format='markdown'): return EM industry board constituent "
                 "records."
             ),

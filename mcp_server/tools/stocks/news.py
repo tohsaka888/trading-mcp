@@ -28,8 +28,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
     )
     def trading_info_global_em(
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -58,7 +58,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_info_global_em",
             signature=(
-                "trading_info_global_em(limit=200, offset=0, "
+                "trading_info_global_em(limit=30, offset=0, "
                 "response_format='markdown'): return Eastmoney global finance news "
                 "records."
             ),

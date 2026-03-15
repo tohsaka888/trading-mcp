@@ -47,8 +47,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             ),
         ],
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -103,8 +103,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field("5日", description="Ranking window"),
         ] = "5日",
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of ranked records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of ranked records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of ranked records to skip")
         ] = 0,
@@ -138,7 +138,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_fund_flow_individual_em",
             signature=(
-                "trading_fund_flow_individual_em(symbol, limit=200, offset=0, "
+                "trading_fund_flow_individual_em(symbol, limit=30, offset=0, "
                 "start_date=None, end_date=None, response_format='markdown'): "
                 "return Eastmoney individual stock fund-flow records."
             ),
@@ -148,7 +148,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ToolMeta(
             name="trading_fund_flow_individual_rank_em",
             signature=(
-                "trading_fund_flow_individual_rank_em(indicator='5日', limit=200, "
+                "trading_fund_flow_individual_rank_em(indicator='5日', limit=30, "
                 "offset=0, response_format='markdown'): return Eastmoney individual "
                 "stock fund-flow rankings."
             ),

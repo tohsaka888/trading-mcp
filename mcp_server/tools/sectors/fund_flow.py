@@ -36,7 +36,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             "Eastmoney is used first and industry/concept rankings fall back to THS when needed; "
             "returned columns may differ by source. "
             "indicator enum: '今日', '5日', '10日'; "
-            "sector_type enum: '行业资金流', '概念资金流', '地域资金流'."
+            "sector_type enum: '行业资金流', '概念资金流', '地域资金流'; "
+            "sort_by enum: '涨跌幅', '主力净流入'."
         ),
         annotations=context.annotations,
     )
@@ -49,9 +50,13 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Literal["行业资金流", "概念资金流", "地域资金流"],
             Field("行业资金流", description="Sector ranking group"),
         ] = "行业资金流",
+        sort_by: Annotated[
+            Literal["涨跌幅", "主力净流入"],
+            Field("涨跌幅", description="Sort field"),
+        ] = "涨跌幅",
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of ranked records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of ranked records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of ranked records to skip")
         ] = 0,
@@ -63,6 +68,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         request = FundFlowSectorRankEmRequest(
             indicator=indicator,
             sector_type=sector_type,
+            sort_by=sort_by,
             limit=limit,
             offset=offset,
         )
@@ -73,8 +79,9 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
                 (
                     "Error: "
                     f"{exc}. Request failed for indicator={indicator}, "
-                    f"sector_type={sector_type}. Check the indicator, sector_type, "
-                    "and Eastmoney/THS network connectivity."
+                    f"sector_type={sector_type}, sort_by={sort_by}. "
+                    "Check the indicator, sector_type, sort_by, and Eastmoney/THS "
+                    "network connectivity."
                 ),
                 empty_table_response(
                     FundFlowSectorRankEmResponse,
@@ -82,6 +89,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
                     offset=offset,
                     indicator=indicator,
                     sector_type=sector_type,
+                    sort_by=sort_by,
                 ),
             )
         return success_result(
@@ -90,7 +98,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
 
     @mcp.tool(
         description=(
-            "Return Eastmoney constituent stock fund-flow records for a board with pagination metadata. "
+            "Return board constituent stock fund-flow records with pagination metadata. "
+            "Eastmoney is used first and THS falls back when needed; returned columns may differ by source. "
             "indicator enum: '今日', '5日', '10日'."
         ),
         annotations=context.annotations,
@@ -105,8 +114,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field("今日", description="Ranking window"),
         ] = "今日",
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of constituent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of constituent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of constituent records to skip")
         ] = 0,
@@ -125,7 +134,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             response = service.fund_flow_sector_summary_em(request)
         except MarketDataError as exc:
             return structured_error_result(
-                f"Error: {exc}. Check the board symbol, indicator, and Eastmoney network connectivity.",
+                f"Error: {exc}. Check the board symbol, indicator, and Eastmoney/THS network connectivity.",
                 empty_table_response(
                     FundFlowSectorSummaryEmResponse,
                     limit=limit,
@@ -143,21 +152,21 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             name="trading_fund_flow_sector_rank_em",
             signature=(
                 "trading_fund_flow_sector_rank_em(indicator='今日', "
-                "sector_type='行业资金流', limit=200, offset=0, "
+                "sector_type='行业资金流', sort_by='涨跌幅', limit=30, offset=0, "
                 "response_format='markdown'): return Eastmoney sector fund-flow "
                 "rankings."
             ),
             resource_description="Eastmoney sector fund-flow rankings",
-            resource_fields=["columns", "items", "indicator", "sector_type"],
+            resource_fields=["columns", "items", "indicator", "sector_type", "sort_by"],
         ),
         ToolMeta(
             name="trading_fund_flow_sector_summary_em",
             signature=(
                 "trading_fund_flow_sector_summary_em(symbol, indicator='今日', "
-                "limit=200, offset=0, response_format='markdown'): return Eastmoney "
-                "board constituent fund-flow records."
+                "limit=30, offset=0, response_format='markdown'): return board "
+                "constituent fund-flow records."
             ),
-            resource_description="Eastmoney board constituent fund-flow records",
+            resource_description="Board constituent fund-flow records",
             resource_fields=["columns", "items", "symbol", "indicator"],
         ),
     ]

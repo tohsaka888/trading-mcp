@@ -54,8 +54,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field("按报告期", description="Indicator mode"),
         ] = "按报告期",
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -122,8 +122,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field("年报", description="Report frequency type"),
         ] = "年报",
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -188,8 +188,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             Field("年报", description="Report frequency type"),
         ] = "年报",
         limit: Annotated[
-            int, Field(200, ge=1, description="Number of recent records to return")
-        ] = 200,
+            int, Field(30, ge=1, description="Number of recent records to return")
+        ] = 30,
         offset: Annotated[
             int, Field(0, ge=0, description="Number of most recent records to skip")
         ] = 0,
@@ -236,7 +236,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             name="trading_fundamental_cn_indicators",
             signature=(
                 "trading_fundamental_cn_indicators(symbol, indicator='按报告期', "
-                "limit=200, offset=0, start_date=None, end_date=None, "
+                "limit=30, offset=0, start_date=None, end_date=None, "
                 "response_format='markdown'): return A-share fundamental indicators "
                 "(raw records)."
             ),
@@ -247,7 +247,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             name="trading_fundamental_us_report",
             signature=(
                 "trading_fundamental_us_report(stock, symbol='资产负债表', "
-                "indicator='年报', limit=200, offset=0, start_date=None, "
+                "indicator='年报', limit=30, offset=0, start_date=None, "
                 "end_date=None, response_format='markdown'): return US financial "
                 "statements (raw records)."
             ),
@@ -258,7 +258,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             name="trading_fundamental_us_indicators",
             signature=(
                 "trading_fundamental_us_indicators(symbol, indicator='年报', "
-                "limit=200, offset=0, start_date=None, end_date=None, "
+                "limit=30, offset=0, start_date=None, end_date=None, "
                 "response_format='markdown'): return US fundamental indicators "
                 "(raw records)."
             ),
