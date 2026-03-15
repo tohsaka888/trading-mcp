@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from io import StringIO
 import re
 import time
 from typing import Any, Iterable
 
-import akshare as ak
-import pandas as pd
-import requests
+from config.akshare_proxy_patch_settings import install_akshare_proxy_patch
 
-from .client import DateLike, MarketDataError
+install_akshare_proxy_patch()
+
+import akshare as ak  # noqa: E402
+import pandas as pd  # noqa: E402
+import requests  # noqa: E402
+
+from .client import DateLike, MarketDataError  # noqa: E402
 
 
 _DATE_COLUMNS = ("date", "日期", "交易日期", "trade_date", "datetime", "time")
@@ -41,6 +46,11 @@ _THS_FUND_FLOW_INDIVIDUAL_RANK_MAP = {
     "10日": "10日排行",
 }
 _THS_FUND_FLOW_SECTOR_RANK_MAP = {
+    "今日": "即时",
+    "5日": "5日排行",
+    "10日": "10日排行",
+}
+_THS_FUND_FLOW_SECTOR_SUMMARY_MAP = {
     "今日": "即时",
     "5日": "5日排行",
     "10日": "10日排行",
@@ -436,7 +446,10 @@ _FUND_FLOW_SECTOR_SUMMARY_CONFIG: dict[str, dict[str, Any]] = {
 }
 
 
-def _expected_columns_present(frame: pd.DataFrame, columns: Iterable[str]) -> bool:
+def _expected_columns_present(
+    frame: pd.DataFrame | None,
+    columns: Iterable[str],
+) -> bool:
     return (
         frame is not None
         and not frame.empty
@@ -637,10 +650,12 @@ def _normalize_us_financial_symbol(symbol: str) -> str:
 
 
 def _filter_frame_by_dates(
-    frame: pd.DataFrame, start: DateLike | None, end: DateLike | None
+    frame: pd.DataFrame | None,
+    start: DateLike | None,
+    end: DateLike | None,
 ) -> pd.DataFrame:
     if frame is None or frame.empty:
-        return frame
+        return pd.DataFrame()
 
     start_ts = _coerce_date(start)
     end_ts = _coerce_date(end)
@@ -661,9 +676,9 @@ def _filter_frame_by_dates(
     return frame.loc[mask]
 
 
-def _normalize_frame(frame: pd.DataFrame) -> pd.DataFrame:
+def _normalize_frame(frame: pd.DataFrame | None) -> pd.DataFrame:
     if frame is None or frame.empty:
-        return frame
+        return pd.DataFrame()
 
     date_col = _find_date_column(frame.columns)
     if date_col is not None:
@@ -693,9 +708,9 @@ def _period_to_rule(period_type: str) -> str:
     return rule
 
 
-def _resample_ohlcv(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
+def _resample_ohlcv(frame: pd.DataFrame | None, rule: str) -> pd.DataFrame:
     if frame is None or frame.empty:
-        return frame
+        return pd.DataFrame()
 
     date_col = _find_date_column(frame.columns)
     if date_col is None:
@@ -867,9 +882,9 @@ class AkshareMarketDataClient:
         return filtered.reset_index(drop=True)
 
     @staticmethod
-    def _normalize_cn_tx_legacy(frame: pd.DataFrame) -> pd.DataFrame:
+    def _normalize_cn_tx_legacy(frame: pd.DataFrame | None) -> pd.DataFrame:
         if frame is None or frame.empty:
-            return frame
+            return pd.DataFrame()
 
         normalized = frame.copy()
         volume_col = _find_column(normalized.columns, _VOLUME_COLUMNS)
@@ -930,8 +945,6 @@ class AkshareMarketDataClient:
         end: DateLike | None,
         period_type: str,
     ) -> pd.DataFrame:
-        start_date = _to_ak_date(start)
-        end_date = _to_ak_date(end)
         period = _period_to_ak(period_type)
         ticker, explicit_code = _normalize_us_symbol(symbol)
         code = explicit_code or self._resolve_us_code(ticker)
@@ -1028,7 +1041,8 @@ class AkshareMarketDataClient:
         if total == 0:
             return list(first_rows)
 
-        page_size = int(params.get("pz") or 100)
+        page_size_raw = params.get("pz")
+        page_size = int(page_size_raw) if isinstance(page_size_raw, (int, str)) else 100
         total_pages = max((total + page_size - 1) // page_size, 1)
         rows: list[dict[str, Any]] = list(first_rows)
         for page in range(2, total_pages + 1):
@@ -1275,6 +1289,92 @@ class AkshareMarketDataClient:
             raise MarketDataError(f"Unknown Eastmoney board symbol: {symbol}")
         return str(matched.iloc[0]["代码"]).strip()
 
+    def _resolve_ths_board(self, symbol: str) -> tuple[str, str]:
+        for board_type, loader in (
+            ("industry", ak.stock_board_industry_name_ths),
+            ("concept", ak.stock_board_concept_name_ths),
+        ):
+            try:
+                frame = loader()
+            except Exception:
+                continue
+            if frame is None or frame.empty:
+                continue
+            matched = frame.loc[frame["name"].astype(str).str.strip() == symbol.strip()]
+            if not matched.empty:
+                return board_type, str(matched.iloc[0]["code"]).strip()
+        raise MarketDataError(f"Unknown THS board symbol: {symbol}")
+
+    def _fetch_ths_board_constituent_page(
+        self,
+        board_type: str,
+        board_code: str,
+        page: int,
+    ) -> tuple[pd.DataFrame, int]:
+        base_path = "thshy" if board_type == "industry" else "gn"
+        if page <= 1:
+            url = f"https://q.10jqka.com.cn/{base_path}/detail/code/{board_code}/"
+        else:
+            url = (
+                f"https://q.10jqka.com.cn/{base_path}/detail/code/{board_code}/"
+                f"page/{page}/"
+            )
+        response = requests.get(
+            url,
+            headers=_EM_HEADERS,
+            timeout=_EM_TIMEOUT_SECONDS,
+        )
+        raise_for_status = getattr(response, "raise_for_status", None)
+        if callable(raise_for_status):
+            raise_for_status()
+        response.encoding = response.encoding or "gbk"
+        html = response.text
+
+        page_match = re.search(r'<span class="page_info">(\d+)/(\d+)</span>', html)
+        total_pages = int(page_match.group(2)) if page_match else 1
+
+        try:
+            tables = pd.read_html(StringIO(html))
+        except ValueError:
+            return pd.DataFrame(columns=["代码", "名称"]), total_pages
+
+        for table in tables:
+            columns = {str(column).strip() for column in table.columns}
+            if {"代码", "名称"}.issubset(columns):
+                payload = table[["代码", "名称"]].copy()
+                payload["代码"] = (
+                    payload["代码"]
+                    .astype(str)
+                    .str.replace(r"\.0$", "", regex=True)
+                    .str.zfill(6)
+                )
+                payload["名称"] = payload["名称"].astype(str).str.strip()
+                return payload, total_pages
+        return pd.DataFrame(columns=["代码", "名称"]), total_pages
+
+    def _fetch_ths_board_constituents(self, symbol: str) -> pd.DataFrame:
+        board_type, board_code = self._resolve_ths_board(symbol)
+        first_page, total_pages = self._fetch_ths_board_constituent_page(
+            board_type,
+            board_code,
+            page=1,
+        )
+        frames = [first_page]
+        for page in range(2, total_pages + 1):
+            page_frame, _ = self._fetch_ths_board_constituent_page(
+                board_type,
+                board_code,
+                page=page,
+            )
+            frames.append(page_frame)
+
+        if not frames:
+            return pd.DataFrame(columns=["代码", "名称"])
+        merged = pd.concat(frames, ignore_index=True)
+        if merged.empty:
+            return pd.DataFrame(columns=["代码", "名称"])
+        return merged.drop_duplicates(subset=["代码"]).reset_index(drop=True)
+
     def _fetch_fund_flow_sector_summary_em_fallback(
         self,
         symbol: str,
@@ -1310,6 +1410,43 @@ class AkshareMarketDataClient:
             column for column in payload.columns if column not in {"代码", "名称"}
         ]
         return self._finalize_rank_frame(payload, config["columns"], numeric_columns)
+
+    def _fetch_fund_flow_sector_summary_ths_fallback(
+        self,
+        symbol: str,
+        indicator: str,
+    ) -> pd.DataFrame:
+        constituents = self._fetch_ths_board_constituents(symbol)
+        if constituents.empty:
+            return pd.DataFrame()
+
+        ths_indicator = _THS_FUND_FLOW_SECTOR_SUMMARY_MAP[indicator]
+        try:
+            frame = ak.stock_fund_flow_individual(symbol=ths_indicator)
+        except Exception as exc:
+            raise MarketDataError(
+                "Akshare THS sector constituent fund-flow fetch failed "
+                f"for symbol={symbol}, indicator={indicator}"
+            ) from exc
+
+        normalized = _normalize_rank_frame_from_ths(
+            frame,
+            {"股票代码": "代码", "股票简称": "名称"},
+        )
+        if normalized.empty:
+            return pd.DataFrame()
+
+        filtered = normalized.loc[
+            normalized["代码"].astype(str).isin(set(constituents["代码"].astype(str)))
+        ].reset_index(drop=True)
+        if filtered.empty:
+            return filtered
+
+        filtered["序号"] = range(1, len(filtered) + 1)
+        ordered_columns = ["序号"] + [
+            column for column in filtered.columns if column != "序号"
+        ]
+        return filtered[ordered_columns]
 
     def fetch_cn_financial_indicators(
         self,
@@ -1428,6 +1565,7 @@ class AkshareMarketDataClient:
 
         config = _FUND_FLOW_INDIVIDUAL_RANK_CONFIG[indicator]
         if _expected_columns_present(frame, config["columns"]):
+            assert frame is not None
             return frame.reset_index(drop=True)
 
         try:
@@ -1458,6 +1596,7 @@ class AkshareMarketDataClient:
 
         config = _FUND_FLOW_SECTOR_RANK_CONFIG[indicator]
         if _expected_columns_present(frame, config["columns"]):
+            assert frame is not None
             return frame.reset_index(drop=True)
 
         try:
@@ -1484,26 +1623,35 @@ class AkshareMarketDataClient:
         symbol: str,
         indicator: str,
     ) -> pd.DataFrame:
+        primary_error: Exception | None = None
         try:
             frame = ak.stock_sector_fund_flow_summary(
                 symbol=symbol.strip(), indicator=indicator
             )
-        except Exception:
+        except Exception as exc:
             frame = None
+            primary_error = exc
 
         config = _FUND_FLOW_SECTOR_SUMMARY_CONFIG[indicator]
         if _expected_columns_present(frame, config["columns"]):
+            assert frame is not None
             return frame.reset_index(drop=True)
 
+        eastmoney_error: Exception | None = primary_error
         try:
             return self._fetch_fund_flow_sector_summary_em_fallback(symbol, indicator)
         except Exception as exc:
-            if isinstance(exc, MarketDataError):
-                raise
+            eastmoney_error = exc
+
+        try:
+            return self._fetch_fund_flow_sector_summary_ths_fallback(symbol, indicator)
+        except Exception as ths_exc:
             raise MarketDataError(
-                "Eastmoney sector constituent fund-flow fetch failed "
-                f"for symbol={symbol}, indicator={indicator}"
-            ) from exc
+                "Sector constituent fund-flow fetch failed "
+                f"for symbol={symbol}, indicator={indicator}; "
+                f"eastmoney_cause={_exception_summary(eastmoney_error or RuntimeError('unknown'))}; "
+                f"ths_cause={_exception_summary(ths_exc)}"
+            ) from ths_exc
 
     def fetch_industry_index_ths(
         self,
