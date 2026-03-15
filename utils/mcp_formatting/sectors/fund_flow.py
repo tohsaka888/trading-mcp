@@ -13,6 +13,7 @@ def format_fund_flow_sector_rank_em_response(
         metadata=[
             f"Indicator: `{response.indicator}`",
             f"Sector type: `{response.sector_type}`",
+            f"Sort by: `{response.sort_by}`",
         ],
     )
 
