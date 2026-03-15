@@ -864,10 +864,142 @@ def test_fetch_fund_flow_sector_summary_unknown_board_raises(monkeypatch) -> Non
         fake_summary,
     )
     monkeypatch.setattr(akshare_client.requests, "get", lambda *_, **__: FakeResponse())
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_fund_flow_sector_summary_ths_fallback",
+        lambda self, symbol, indicator: (_ for _ in ()).throw(
+            MarketDataError("Unknown THS board symbol: 电源设备")
+        ),
+    )
 
     client = akshare_client.AkshareMarketDataClient()
-    with pytest.raises(MarketDataError, match="Unknown Eastmoney board symbol"):
+    with pytest.raises(
+        MarketDataError,
+        match=(
+            "Sector constituent fund-flow fetch failed for symbol=电源设备, "
+            "indicator=今日; eastmoney_cause=MarketDataError: Unknown Eastmoney "
+            "board symbol: 电源设备; ths_cause=MarketDataError: Unknown THS board "
+            "symbol: 电源设备"
+        ),
+    ):
         client.fetch_fund_flow_sector_summary_em("电源设备", "今日")
+
+
+def test_fetch_fund_flow_sector_summary_falls_back_to_ths(monkeypatch) -> None:
+    class FakePageResponse:
+        def __init__(self, text: str) -> None:
+            self.text = text
+            self.encoding = None
+
+        def raise_for_status(self) -> None:
+            return None
+
+    page_html = """
+    <html>
+      <body>
+        <table>
+          <thead>
+            <tr><th>序号</th><th>代码</th><th>名称</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>300185</td><td>通裕重工</td></tr>
+            <tr><td>2</td><td>300569</td><td>天能重工</td></tr>
+          </tbody>
+        </table>
+        <span class="page_info">1/1</span>
+      </body>
+    </html>
+    """
+
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_sector_fund_flow_summary",
+        lambda **_: pd.DataFrame(),
+    )
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_fund_flow_sector_summary_em_fallback",
+        lambda self, symbol, indicator: (_ for _ in ()).throw(
+            akshare_client.requests.exceptions.ConnectionError("eastmoney unavailable")
+        ),
+    )
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_board_industry_name_ths",
+        lambda: pd.DataFrame({"name": ["风电设备"], "code": ["881280"]}),
+    )
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_board_concept_name_ths",
+        lambda: pd.DataFrame({"name": [], "code": []}),
+    )
+    monkeypatch.setattr(
+        akshare_client.requests,
+        "get",
+        lambda *_, **__: FakePageResponse(page_html),
+    )
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_fund_flow_individual",
+        lambda *, symbol: pd.DataFrame({
+            "序号": [3, 10],
+            "股票代码": ["300185", "000001"],
+            "股票简称": ["通裕重工", "平安银行"],
+            "最新价": [4.21, 10.0],
+            "涨跌幅": ["19.94%", "1.00%"],
+            "换手率": ["23.13%", "2.00%"],
+            "流入资金": ["19.31亿", "1.00亿"],
+            "流出资金": ["15.02亿", "0.80亿"],
+            "净额": ["4.29亿", "0.20亿"],
+            "成交额": ["34.33亿", "5.00亿"],
+        }),
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    frame = client.fetch_fund_flow_sector_summary_em("风电设备", "今日")
+
+    assert frame["代码"].tolist() == ["300185"]
+    assert frame["名称"].tolist() == ["通裕重工"]
+    assert frame["序号"].tolist() == [1]
+
+
+def test_fetch_fund_flow_sector_summary_includes_root_causes(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        akshare_client.ak,
+        "stock_sector_fund_flow_summary",
+        lambda **_: pd.DataFrame(),
+    )
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_fund_flow_sector_summary_em_fallback",
+        lambda self, symbol, indicator: (_ for _ in ()).throw(
+            akshare_client.requests.exceptions.ConnectionError("eastmoney unavailable")
+        ),
+    )
+    monkeypatch.setattr(
+        akshare_client.AkshareMarketDataClient,
+        "_fetch_fund_flow_sector_summary_ths_fallback",
+        lambda self, symbol, indicator: (_ for _ in ()).throw(
+            MarketDataError(
+                "Akshare THS sector constituent fund-flow fetch failed "
+                "for symbol=风电设备, indicator=今日"
+            )
+        ),
+    )
+
+    client = akshare_client.AkshareMarketDataClient()
+    with pytest.raises(
+        MarketDataError,
+        match=(
+            "Sector constituent fund-flow fetch failed for symbol=风电设备, "
+            "indicator=今日; eastmoney_cause=ConnectionError: eastmoney unavailable; "
+            "ths_cause=MarketDataError: Akshare THS sector constituent fund-flow "
+            "fetch failed for symbol=风电设备, indicator=今日"
+        ),
+    ):
+        client.fetch_fund_flow_sector_summary_em("风电设备", "今日")
 
 
 def test_fetch_industry_index_ths_normalizes_dates(monkeypatch) -> None:

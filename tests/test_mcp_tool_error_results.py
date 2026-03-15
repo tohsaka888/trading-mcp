@@ -4,7 +4,7 @@ import asyncio
 from typing import Any, cast
 
 from mcp.server.fastmcp import FastMCP
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from data.client import MarketDataError
 from mcp_server.context import ServerContext
@@ -33,7 +33,7 @@ class ErrorStockTechnicalService:
 def _make_server(service: Any, register_tools: Any) -> FastMCP:
     server = FastMCP("test_server", stateless_http=True, json_response=True)
     context = ServerContext(
-        service=cast(Any, service),
+        service=service,
         annotations=ToolAnnotations(
             readOnlyHint=True,
             destructiveHint=False,
@@ -51,15 +51,19 @@ def test_sector_fund_flow_rank_error_returns_schema_safe_result() -> None:
             register_sector_fund_flow_tools,
         )
 
-        result = await server.call_tool(
+        result = cast(
+            CallToolResult,
+            await server.call_tool(
             "trading_fund_flow_sector_rank_em",
             {
                 "indicator": "今日",
                 "sector_type": "行业资金流",
+                "sort_by": "涨跌幅",
                 "limit": 5,
                 "offset": 0,
                 "response_format": "markdown",
             },
+            ),
         )
 
         assert result.isError is True
@@ -70,10 +74,11 @@ def test_sector_fund_flow_rank_error_returns_schema_safe_result() -> None:
         )
         assert structured.indicator == "今日"
         assert structured.sector_type == "行业资金流"
+        assert structured.sort_by == "涨跌幅"
         assert structured.items == []
         assert structured.columns == []
 
-        text = result.content[0].text
+        text = cast(TextContent, result.content[0]).text
         assert text is not None
         assert "Eastmoney sector fund-flow ranking fetch failed" in text
         assert "indicator=今日" in text
@@ -90,7 +95,9 @@ def test_kline_error_returns_schema_safe_result() -> None:
             register_stock_technical_tools,
         )
 
-        result = await server.call_tool(
+        result = cast(
+            CallToolResult,
+            await server.call_tool(
             "trading_kline",
             {
                 "symbol": "000001",
@@ -99,6 +106,7 @@ def test_kline_error_returns_schema_safe_result() -> None:
                 "period_type": "1d",
                 "response_format": "markdown",
             },
+            ),
         )
 
         assert result.isError is True
@@ -110,7 +118,7 @@ def test_kline_error_returns_schema_safe_result() -> None:
         assert structured.count == 0
         assert structured.period_type == "1d"
 
-        text = result.content[0].text
+        text = cast(TextContent, result.content[0]).text
         assert text is not None
         assert "K-line fetch failed for symbol=000001" in text
         assert "KlineResponse" not in text

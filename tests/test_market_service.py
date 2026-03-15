@@ -4,8 +4,9 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
+import pytest
 
-from data.client import DateLike
+from data.client import DateLike, MarketDataError
 from models.mcp_tools import (
     BoardChangeEmRequest,
     FundFlowIndividualEmRequest,
@@ -340,6 +341,7 @@ class FakeFundamentalClient(FakeClient):
         return pd.DataFrame({
             "序号": [1, 2, 3],
             "名称": ["电源设备", "小金属", "元件"],
+            f"{indicator}涨跌幅": [1.0, 3.0, 2.0],
             f"{indicator}主力净流入-净额": [300.0, 200.0, 100.0],
         })
 
@@ -469,7 +471,7 @@ def test_fund_flow_individual_rank_uses_head_pagination() -> None:
     assert response.items[0]["代码"] == "000002"
 
 
-def test_fund_flow_sector_rank_uses_head_pagination() -> None:
+def test_fund_flow_sector_rank_sorts_by_change_pct_by_default() -> None:
     client = FakeFundamentalClient()
     service = MarketService(client, FakeEngine())
     response = service.fund_flow_sector_rank_em(
@@ -483,8 +485,95 @@ def test_fund_flow_sector_rank_uses_head_pagination() -> None:
 
     assert response.indicator == "今日"
     assert response.sector_type == "行业资金流"
+    assert response.sort_by == "涨跌幅"
+    assert response.count == 2
+    assert response.items[0]["名称"] == "小金属"
+    assert response.items[1]["名称"] == "元件"
+
+
+def test_fund_flow_sector_rank_sorts_by_main_net_inflow_when_requested() -> None:
+    client = FakeFundamentalClient()
+    service = MarketService(client, FakeEngine())
+    response = service.fund_flow_sector_rank_em(
+        FundFlowSectorRankEmRequest(
+            indicator="今日",
+            sector_type="行业资金流",
+            sort_by="主力净流入",
+            limit=2,
+            offset=0,
+        )
+    )
+
     assert response.count == 2
     assert response.items[0]["名称"] == "电源设备"
+    assert response.items[1]["名称"] == "小金属"
+
+
+def test_fund_flow_sector_rank_paginates_after_sorting() -> None:
+    client = FakeFundamentalClient()
+    service = MarketService(client, FakeEngine())
+    response = service.fund_flow_sector_rank_em(
+        FundFlowSectorRankEmRequest(
+            indicator="今日",
+            sector_type="行业资金流",
+            limit=1,
+            offset=1,
+        )
+    )
+
+    assert response.count == 1
+    assert response.items[0]["名称"] == "元件"
+
+
+def test_fund_flow_sector_rank_sorts_percent_strings() -> None:
+    class PercentClient(FakeFundamentalClient):
+        def fetch_fund_flow_sector_rank_em(
+            self, indicator: str, sector_type: str
+        ) -> pd.DataFrame:
+            return pd.DataFrame({
+                "序号": [1, 2, 3],
+                "名称": ["电源设备", "小金属", "元件"],
+                "阶段涨跌幅": ["1.2%", "1,234.5%", "3.4%"],
+                "净额": [1.0, 2.0, 3.0],
+            })
+
+    service = MarketService(PercentClient(), FakeEngine())
+    response = service.fund_flow_sector_rank_em(
+        FundFlowSectorRankEmRequest(
+            indicator="10日",
+            sector_type="行业资金流",
+            limit=3,
+        )
+    )
+
+    assert [item["名称"] for item in response.items] == ["小金属", "元件", "电源设备"]
+
+
+def test_fund_flow_sector_rank_raises_when_sort_column_missing() -> None:
+    class MissingSortClient(FakeFundamentalClient):
+        def fetch_fund_flow_sector_rank_em(
+            self, indicator: str, sector_type: str
+        ) -> pd.DataFrame:
+            return pd.DataFrame({
+                "序号": [1],
+                "名称": ["电源设备"],
+            })
+
+    service = MarketService(MissingSortClient(), FakeEngine())
+
+    with pytest.raises(
+        MarketDataError,
+        match=(
+            "Sector rank sorting failed for indicator=今日, "
+            "sector_type=行业资金流, sort_by=涨跌幅"
+        ),
+    ):
+        service.fund_flow_sector_rank_em(
+            FundFlowSectorRankEmRequest(
+                indicator="今日",
+                sector_type="行业资金流",
+            )
+        )
 
 
 def test_fund_flow_sector_summary_uses_head_pagination() -> None:

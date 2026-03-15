@@ -118,14 +118,14 @@ def test_volume_point_timestamp_json_includes_timezone() -> None:
 
 def test_fund_flow_individual_request_defaults() -> None:
     request = FundFlowIndividualEmRequest(symbol="000001")
-    assert request.limit == 200
+    assert request.limit == 30
     assert request.offset == 0
     assert request.start_date is None
 
 
 def test_board_change_request_defaults() -> None:
     request = BoardChangeEmRequest()
-    assert request.limit == 200
+    assert request.limit == 30
     assert request.offset == 0
 
 
@@ -151,6 +151,15 @@ def test_fund_flow_sector_rank_validation() -> None:
     with pytest.raises(ValidationError):
         FundFlowSectorRankEmRequest(sector_type="主题资金流")
 
+    with pytest.raises(ValidationError):
+        FundFlowSectorRankEmRequest(sort_by="成交额")
+
+
+def test_fund_flow_sector_rank_defaults() -> None:
+    request = FundFlowSectorRankEmRequest()
+    assert request.sort_by == "涨跌幅"
+    assert request.limit == 30
+
 
 def test_fund_flow_sector_summary_indicator_validation() -> None:
     with pytest.raises(ValidationError):
@@ -160,7 +169,7 @@ def test_fund_flow_sector_summary_indicator_validation() -> None:
 def test_fundamental_cn_request_defaults() -> None:
     request = FundamentalCnIndicatorsRequest(symbol="000001")
     assert request.indicator == "按报告期"
-    assert request.limit == 200
+    assert request.limit == 30
     assert request.offset == 0
 
 
@@ -173,7 +182,7 @@ def test_fundamental_us_report_defaults() -> None:
     request = FundamentalUsReportRequest(stock="TSLA")
     assert request.symbol == "资产负债表"
     assert request.indicator == "年报"
-    assert request.limit == 200
+    assert request.limit == 30
 
 
 def test_fundamental_us_report_symbol_validation() -> None:
@@ -230,10 +239,10 @@ def test_industry_hist_defaults() -> None:
 def test_industry_hist_min_defaults() -> None:
     request = IndustryHistMinEmRequest(symbol="小金属")
     assert request.period == "5"
-    assert request.limit == 200
+    assert request.limit == 30
 
 
 def test_info_global_request_defaults() -> None:
     request = InfoGlobalEmRequest()
-    assert request.limit == 200
+    assert request.limit == 30
     assert request.offset == 0
