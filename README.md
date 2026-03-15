@@ -48,6 +48,10 @@ export TRADING_MCP_DATA_DIR=./data
 export TRADING_MCP_DEFAULT_SYMBOL=000001
 export TRADING_MCP_HOST=0.0.0.0
 export TRADING_MCP_PORT=8000
+export TRADING_MCP_AKSHARE_PROXY_ENABLED=true
+export TRADING_MCP_AKSHARE_PROXY_AUTH_IP=10.0.0.8
+export TRADING_MCP_AKSHARE_PROXY_AUTH_TOKEN=
+export TRADING_MCP_AKSHARE_PROXY_RETRY=30
 ```
 
 字段含义：
@@ -56,6 +60,15 @@ export TRADING_MCP_PORT=8000
 - `TRADING_MCP_DEFAULT_SYMBOL`：默认行情标的。
 - `TRADING_MCP_HOST`：MCP 服务监听地址。
 - `TRADING_MCP_PORT`：MCP 服务端口。
+- `TRADING_MCP_AKSHARE_PROXY_ENABLED`：是否启用 `akshare-proxy-patch`。
+- `TRADING_MCP_AKSHARE_PROXY_AUTH_IP`：`akshare-proxy-patch` 授权网关 IP；未配置时不会安装 patch。
+- `TRADING_MCP_AKSHARE_PROXY_AUTH_TOKEN`：可选授权 token。
+- `TRADING_MCP_AKSHARE_PROXY_RETRY`：patch 内部重试次数。
+
+东财反爬代理说明：
+- 项目已内置 `akshare-proxy-patch`，会在导入 [data/akshare_client.py](/home/tohsaka/workspace/trading-mcp/data/akshare_client.py) 时自动尝试安装。
+- 只有配置了 `TRADING_MCP_AKSHARE_PROXY_AUTH_IP` 且 `TRADING_MCP_AKSHARE_PROXY_ENABLED=true` 时才会启用。
+- patch 只会 hook 东财相关域名请求，不影响其他非目标站点。
 
 **Python 用法**
 
@@ -111,26 +124,26 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 
 可用工具：
 - `trading_kline(symbol, limit=30, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
-- `trading_macd(symbol, limit, fast_period=12, slow_period=26, signal_period=9, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
-- `trading_rsi(symbol, limit, period=14, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
-- `trading_ma(symbol, limit, period=20, ma_type="sma", offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
-- `trading_volume(symbol, limit, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
-- `trading_fund_flow_individual_em(symbol, limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
-- `trading_fund_flow_individual_rank_em(indicator="5日", limit=200, offset=0, response_format="markdown")`
-- `trading_fund_flow_sector_rank_em(indicator="今日", sector_type="行业资金流", limit=200, offset=0, response_format="markdown")`
-- `trading_fund_flow_sector_summary_em(symbol, indicator="今日", limit=200, offset=0, response_format="markdown")`
-- `trading_fundamental_cn_indicators(symbol, indicator="按报告期", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
-- `trading_fundamental_us_report(stock, symbol="资产负债表", indicator="年报", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
-- `trading_fundamental_us_indicators(symbol, indicator="年报", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
-- `trading_industry_summary_ths(limit=200, offset=0, response_format="markdown")`
-- `trading_industry_index_ths(symbol, limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
-- `trading_industry_name_em(limit=200, offset=0, response_format="markdown")`
-- `trading_board_change_em(limit=200, offset=0, response_format="markdown")`
-- `trading_industry_spot_em(symbol, limit=200, offset=0, response_format="markdown")`
-- `trading_industry_cons_em(symbol, limit=200, offset=0, response_format="markdown")`
-- `trading_industry_hist_em(symbol, period="日k", adjust="none", limit=200, offset=0, start_date=None, end_date=None, response_format="markdown")`
-- `trading_industry_hist_min_em(symbol, period="5", limit=200, offset=0, response_format="markdown")`
-- `trading_info_global_em(limit=200, offset=0, response_format="markdown")`
+- `trading_macd(symbol, limit=30, fast_period=12, slow_period=26, signal_period=9, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_rsi(symbol, limit=30, period=14, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_ma(symbol, limit=30, period=20, ma_type="sma", offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_volume(symbol, limit=30, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
+- `trading_fund_flow_individual_em(symbol, limit=30, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_fund_flow_individual_rank_em(indicator="5日", limit=30, offset=0, response_format="markdown")`
+- `trading_fund_flow_sector_rank_em(indicator="今日", sector_type="行业资金流", sort_by="涨跌幅", limit=30, offset=0, response_format="markdown")`
+- `trading_fund_flow_sector_summary_em(symbol, indicator="今日", limit=30, offset=0, response_format="markdown")`
+- `trading_fundamental_cn_indicators(symbol, indicator="按报告期", limit=30, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_fundamental_us_report(stock, symbol="资产负债表", indicator="年报", limit=30, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_fundamental_us_indicators(symbol, indicator="年报", limit=30, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_industry_summary_ths(limit=30, offset=0, response_format="markdown")`
+- `trading_industry_index_ths(symbol, limit=30, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_industry_name_em(limit=30, offset=0, response_format="markdown")`
+- `trading_board_change_em(limit=30, offset=0, response_format="markdown")`
+- `trading_industry_spot_em(symbol, limit=30, offset=0, response_format="markdown")`
+- `trading_industry_cons_em(symbol, limit=30, offset=0, response_format="markdown")`
+- `trading_industry_hist_em(symbol, period="日k", adjust="none", limit=30, offset=0, start_date=None, end_date=None, response_format="markdown")`
+- `trading_industry_hist_min_em(symbol, period="5", limit=30, offset=0, response_format="markdown")`
+- `trading_info_global_em(limit=30, offset=0, response_format="markdown")`
 
 `trading_fundamental_cn_indicators` 参数说明：
 - `indicator` 枚举：`按报告期`、`按单季度`
@@ -162,13 +175,16 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_fund_flow_sector_rank_em`：东方财富板块资金流排名
   - `indicator` 枚举：`今日`、`5日`、`10日`
   - `sector_type` 枚举：`行业资金流`、`概念资金流`、`地域资金流`
+  - `sort_by` 枚举：`涨跌幅`、`主力净流入`；默认按 `涨跌幅` 降序
 - 当东方财富排行接口不可用时：
   - 个股排行会回退到同花顺个股资金流排行
   - 行业/概念板块排行会回退到同花顺对应排行
   - 回退后返回列可能不同于东方财富原始列；`地域资金流` 不回退
-- `trading_fund_flow_sector_summary_em`：东方财富指定板块的成份股资金流
-  - `symbol` 为东方财富板块名称，如 `电源设备`
+- `trading_fund_flow_sector_summary_em`：指定板块的成份股资金流
+  - 默认使用东方财富，失败时回退到同花顺
+  - `symbol` 为板块名称，如 `电源设备`、`风电设备`
   - `indicator` 枚举：`今日`、`5日`、`10日`
+  - 回退后返回列可能不同于东方财富原始列
 - 资金流向结果统一按原始表格返回：`columns + items`
 
 符号说明：
@@ -204,7 +220,7 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
   "items": [],
   "count": 0,
   "total": 0,
-  "limit": 200,
+  "limit": 30,
   "offset": 0,
   "has_more": false,
   "next_offset": null,

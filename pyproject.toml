@@ -5,6 +5,9 @@ fix = true
 preview = true
 
 [[tool.uv.index]]
+url = "https://pypi.org/simple"
+
+[[tool.uv.index]]
 url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
 default = true
 
@@ -35,6 +38,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "akshare>=1.18.21",
+    "akshare-proxy-patch>=0.2.9",
     "mcp[cli]>=1.9.4",
     "numpy>=1.26.0",
     "pandas>=2.2.0",
