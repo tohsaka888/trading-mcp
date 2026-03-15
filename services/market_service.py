@@ -128,6 +128,22 @@ def _coerce_optional_float(value: object) -> float | None:
         return None
 
 
+def _coerce_sort_number(value: object) -> float | None:
+    if _is_missing(value):
+        return None
+    if isinstance(value, str):
+        cleaned = value.strip().replace(",", "")
+        if cleaned.endswith("%"):
+            cleaned = cleaned[:-1]
+        if not cleaned:
+            return None
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+    return _coerce_optional_float(value)
+
+
 def _round_optional_float(value: float | None, *, ndigits: int = 3) -> float | None:
     if value is None:
         return None
@@ -337,6 +353,39 @@ def _paginate_head(
     has_more = end < total
     next_offset = end if has_more else None
     return sliced, total, count, has_more, next_offset
+
+
+def _resolve_sector_rank_sort_candidates(
+    indicator: str,
+    sort_by: str,
+) -> tuple[str, ...]:
+    if sort_by == "涨跌幅":
+        return (f"{indicator}涨跌幅", "今天涨跌幅", "阶段涨跌幅", "涨跌幅")
+    if sort_by == "主力净流入":
+        return (f"{indicator}主力净流入-净额", "主力净流入-净额", "净额")
+    raise MarketDataError(f"Unsupported sector rank sort_by: {sort_by}")
+
+
+def _sort_table_records_desc(
+    columns: Sequence[str],
+    records: Sequence[dict[str, Any]],
+    *,
+    candidate_columns: Sequence[str],
+) -> tuple[list[dict[str, Any]], str]:
+    sort_column = next((column for column in candidate_columns if column in columns), None)
+    if sort_column is None:
+        raise MarketDataError(
+            "No matching sort column found. "
+            f"Candidates: {', '.join(candidate_columns)}"
+        )
+
+    def sort_key(record: dict[str, Any]) -> tuple[int, float]:
+        sort_value = _coerce_sort_number(record.get(sort_column))
+        if sort_value is None:
+            return (1, 0.0)
+        return (0, -sort_value)
+
+    return sorted(records, key=sort_key), sort_column
 
 
 def build_kline_bars(frame: pd.DataFrame) -> list[KlineBar]:
@@ -736,12 +785,29 @@ class MarketService:
             request.sector_type,
         )
         columns, records = _build_table_records(frame)
+        try:
+            sorted_records, _ = _sort_table_records_desc(
+                columns,
+                records,
+                candidate_columns=_resolve_sector_rank_sort_candidates(
+                    request.indicator,
+                    request.sort_by,
+                ),
+            )
+        except MarketDataError as exc:
+            raise MarketDataError(
+                "Sector rank sorting failed "
+                f"for indicator={request.indicator}, "
+                f"sector_type={request.sector_type}, sort_by={request.sort_by}; "
+                f"cause={exc}"
+            ) from exc
         items, total, count, has_more, next_offset = _paginate_head(
-            records, request.limit, request.offset
+            sorted_records, request.limit, request.offset
         )
         return FundFlowSectorRankEmResponse(
             indicator=request.indicator,
             sector_type=request.sector_type,
+            sort_by=request.sort_by,
             items=items,
             columns=columns,
             count=count,
