@@ -6,6 +6,7 @@ from models.mcp_tools.common import TableRequest, TableResponse
 
 _FUND_FLOW_SECTOR_RANK_INDICATORS = {"今日", "5日", "10日"}
 _FUND_FLOW_SECTOR_TYPES = {"行业资金流", "概念资金流", "地域资金流"}
+_FUND_FLOW_SECTOR_SORT_OPTIONS = {"涨跌幅", "主力净流入"}
 
 
 class FundFlowSectorRankEmRequest(TableRequest):
@@ -16,6 +17,10 @@ class FundFlowSectorRankEmRequest(TableRequest):
     sector_type: str = Field(
         "行业资金流",
         description="Sector type: 行业资金流, 概念资金流, 地域资金流",
+    )
+    sort_by: str = Field(
+        "涨跌幅",
+        description="Sort field: 涨跌幅, 主力净流入",
     )
 
     @field_validator("indicator")
@@ -32,6 +37,13 @@ class FundFlowSectorRankEmRequest(TableRequest):
             raise ValueError(
                 "sector_type must be one of: 行业资金流, 概念资金流, 地域资金流"
             )
+        return value
+
+    @field_validator("sort_by")
+    @classmethod
+    def _validate_sort_by(cls, value: str) -> str:
+        if value not in _FUND_FLOW_SECTOR_SORT_OPTIONS:
+            raise ValueError("sort_by must be one of: 涨跌幅, 主力净流入")
         return value
 
 
@@ -53,6 +65,7 @@ class FundFlowSectorSummaryEmRequest(TableRequest):
 class FundFlowSectorRankEmResponse(TableResponse):
     indicator: str = Field(..., description="Ranking window")
     sector_type: str = Field(..., description="Sector type")
+    sort_by: str = Field(..., description="Applied sort field")
 
 
 class FundFlowSectorSummaryEmResponse(TableResponse):

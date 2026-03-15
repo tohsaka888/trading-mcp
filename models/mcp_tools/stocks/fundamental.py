@@ -15,7 +15,7 @@ class FundamentalCnIndicatorsRequest(DateRangeRequest):
         "按报告期",
         description="Indicator mode: 按报告期 or 按单季度",
     )
-    limit: int = Field(200, ge=1, description="Number of recent records to return")
+    limit: int = Field(30, ge=1, description="Number of recent records to return")
     offset: int = Field(0, ge=0, description="Number of most recent records to skip")
 
     @field_validator("indicator")
@@ -36,7 +36,7 @@ class FundamentalUsReportRequest(DateRangeRequest):
         "年报",
         description="Indicator type: 年报, 单季报, 累计季报",
     )
-    limit: int = Field(200, ge=1, description="Number of recent records to return")
+    limit: int = Field(30, ge=1, description="Number of recent records to return")
     offset: int = Field(0, ge=0, description="Number of most recent records to skip")
 
     @field_validator("symbol")
@@ -62,7 +62,7 @@ class FundamentalUsIndicatorsRequest(DateRangeRequest):
         "年报",
         description="Indicator type: 年报, 单季报, 累计季报",
     )
-    limit: int = Field(200, ge=1, description="Number of recent records to return")
+    limit: int = Field(30, ge=1, description="Number of recent records to return")
     offset: int = Field(0, ge=0, description="Number of most recent records to skip")
 
     @field_validator("indicator")

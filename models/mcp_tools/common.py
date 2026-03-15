@@ -43,7 +43,7 @@ class DateRangeRequest(BaseModel):
 
 class ToolRequest(DateRangeRequest):
     symbol: str = Field(..., min_length=1, description="Market symbol identifier")
-    limit: int = Field(..., ge=1, description="Number of recent data points to return")
+    limit: int = Field(30, ge=1, description="Number of recent data points to return")
     offset: int = Field(0, ge=0, description="Number of most recent points to skip")
     period_type: str = Field(
         "1d",
@@ -66,7 +66,7 @@ class ToolRequest(DateRangeRequest):
 
 
 class TableRequest(BaseModel):
-    limit: int = Field(200, ge=1, description="Number of recent records to return")
+    limit: int = Field(30, ge=1, description="Number of recent records to return")
     offset: int = Field(0, ge=0, description="Number of most recent records to skip")
 
 
