@@ -39,7 +39,7 @@ EXPECTED_TOOL_SIGNATURES = [
     "trading_ma(symbol, limit=30, period=20, ma_type='sma', offset=0, period_type='1d', start_date=None, end_date=None, response_format='markdown'): return moving average values.",
     "trading_fund_flow_individual_em(symbol, limit=30, offset=0, start_date=None, end_date=None, response_format='markdown'): return Eastmoney individual stock fund-flow records.",
     "trading_fund_flow_individual_rank_em(indicator='5日', limit=30, offset=0, response_format='markdown'): return Eastmoney individual stock fund-flow rankings.",
-    "trading_fund_flow_sector_rank_em(indicator='今日', sector_type='行业资金流', sort_by='涨跌幅', limit=30, offset=0, response_format='markdown'): return Eastmoney sector fund-flow rankings.",
+    "trading_fund_flow_sector_rank_em(indicator='今日', sector_type='行业资金流', sort_by='主力净流入', limit=30, offset=0, response_format='markdown'): return Eastmoney sector fund-flow rankings.",
     "trading_fund_flow_sector_summary_em(symbol, indicator='今日', limit=30, offset=0, response_format='markdown'): return board constituent fund-flow records.",
     "trading_fundamental_cn_indicators(symbol, indicator='按报告期', limit=30, offset=0, start_date=None, end_date=None, response_format='markdown'): return A-share fundamental indicators (raw records).",
     "trading_fundamental_us_report(stock, symbol='资产负债表', indicator='年报', limit=30, offset=0, start_date=None, end_date=None, response_format='markdown'): return US financial statements (raw records).",

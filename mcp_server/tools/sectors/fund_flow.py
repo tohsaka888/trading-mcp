@@ -52,8 +52,8 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
         ] = "行业资金流",
         sort_by: Annotated[
             Literal["涨跌幅", "主力净流入"],
-            Field("涨跌幅", description="Sort field"),
-        ] = "涨跌幅",
+            Field("主力净流入", description="Sort field"),
+        ] = "主力净流入",
         limit: Annotated[
             int, Field(30, ge=1, description="Number of ranked records to return")
         ] = 30,
@@ -152,7 +152,7 @@ def register_tools(mcp: FastMCP, context: ServerContext) -> list[ToolMeta]:
             name="trading_fund_flow_sector_rank_em",
             signature=(
                 "trading_fund_flow_sector_rank_em(indicator='今日', "
-                "sector_type='行业资金流', sort_by='涨跌幅', limit=30, offset=0, "
+                "sector_type='行业资金流', sort_by='主力净流入', limit=30, offset=0, "
                 "response_format='markdown'): return Eastmoney sector fund-flow "
                 "rankings."
             ),

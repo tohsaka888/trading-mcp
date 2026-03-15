@@ -471,7 +471,7 @@ def test_fund_flow_individual_rank_uses_head_pagination() -> None:
     assert response.items[0]["代码"] == "000002"
 
 
-def test_fund_flow_sector_rank_sorts_by_change_pct_by_default() -> None:
+def test_fund_flow_sector_rank_sorts_by_main_net_inflow_by_default() -> None:
     client = FakeFundamentalClient()
     service = MarketService(client, FakeEngine())
     response = service.fund_flow_sector_rank_em(
@@ -485,10 +485,10 @@ def test_fund_flow_sector_rank_sorts_by_change_pct_by_default() -> None:
 
     assert response.indicator == "今日"
     assert response.sector_type == "行业资金流"
-    assert response.sort_by == "涨跌幅"
+    assert response.sort_by == "主力净流入"
     assert response.count == 2
-    assert response.items[0]["名称"] == "小金属"
-    assert response.items[1]["名称"] == "元件"
+    assert response.items[0]["名称"] == "电源设备"
+    assert response.items[1]["名称"] == "小金属"
 
 
 def test_fund_flow_sector_rank_sorts_by_main_net_inflow_when_requested() -> None:
@@ -522,7 +522,7 @@ def test_fund_flow_sector_rank_paginates_after_sorting() -> None:
     )
 
     assert response.count == 1
-    assert response.items[0]["名称"] == "元件"
+    assert response.items[0]["名称"] == "小金属"
 
 
 def test_fund_flow_sector_rank_sorts_percent_strings() -> None:
@@ -542,6 +542,7 @@ def test_fund_flow_sector_rank_sorts_percent_strings() -> None:
         FundFlowSectorRankEmRequest(
             indicator="10日",
             sector_type="行业资金流",
+            sort_by="涨跌幅",
             limit=3,
         )
     )
@@ -565,7 +566,7 @@ def test_fund_flow_sector_rank_raises_when_sort_column_missing() -> None:
         MarketDataError,
         match=(
             "Sector rank sorting failed for indicator=今日, "
-            "sector_type=行业资金流, sort_by=涨跌幅"
+            "sector_type=行业资金流, sort_by=主力净流入"
         ),
     ):
         service.fund_flow_sector_rank_em(

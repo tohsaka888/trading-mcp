@@ -19,7 +19,7 @@ class FundFlowSectorRankEmRequest(TableRequest):
         description="Sector type: 行业资金流, 概念资金流, 地域资金流",
     )
     sort_by: str = Field(
-        "涨跌幅",
+        "主力净流入",
         description="Sort field: 涨跌幅, 主力净流入",
     )
 

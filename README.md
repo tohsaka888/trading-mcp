@@ -130,7 +130,7 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_volume(symbol, limit=30, offset=0, period_type="1d", start_date=None, end_date=None, response_format="markdown")`
 - `trading_fund_flow_individual_em(symbol, limit=30, offset=0, start_date=None, end_date=None, response_format="markdown")`
 - `trading_fund_flow_individual_rank_em(indicator="5日", limit=30, offset=0, response_format="markdown")`
-- `trading_fund_flow_sector_rank_em(indicator="今日", sector_type="行业资金流", sort_by="涨跌幅", limit=30, offset=0, response_format="markdown")`
+- `trading_fund_flow_sector_rank_em(indicator="今日", sector_type="行业资金流", sort_by="主力净流入", limit=30, offset=0, response_format="markdown")`
 - `trading_fund_flow_sector_summary_em(symbol, indicator="今日", limit=30, offset=0, response_format="markdown")`
 - `trading_fundamental_cn_indicators(symbol, indicator="按报告期", limit=30, offset=0, start_date=None, end_date=None, response_format="markdown")`
 - `trading_fundamental_us_report(stock, symbol="资产负债表", indicator="年报", limit=30, offset=0, start_date=None, end_date=None, response_format="markdown")`
@@ -175,7 +175,7 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
 - `trading_fund_flow_sector_rank_em`：东方财富板块资金流排名
   - `indicator` 枚举：`今日`、`5日`、`10日`
   - `sector_type` 枚举：`行业资金流`、`概念资金流`、`地域资金流`
-  - `sort_by` 枚举：`涨跌幅`、`主力净流入`；默认按 `涨跌幅` 降序
+  - `sort_by` 枚举：`涨跌幅`、`主力净流入`；默认按 `主力净流入` 降序
 - 当东方财富排行接口不可用时：
   - 个股排行会回退到同花顺个股资金流排行
   - 行业/概念板块排行会回退到同花顺对应排行

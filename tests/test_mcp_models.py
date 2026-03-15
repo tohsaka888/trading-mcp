@@ -157,7 +157,7 @@ def test_fund_flow_sector_rank_validation() -> None:
 
 def test_fund_flow_sector_rank_defaults() -> None:
     request = FundFlowSectorRankEmRequest()
-    assert request.sort_by == "涨跌幅"
+    assert request.sort_by == "主力净流入"
     assert request.limit == 30
 
 
