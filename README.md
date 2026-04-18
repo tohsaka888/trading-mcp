@@ -49,9 +49,8 @@ export TRADING_MCP_DEFAULT_SYMBOL=000001
 export TRADING_MCP_HOST=0.0.0.0
 export TRADING_MCP_PORT=8000
 export TRADING_MCP_AKSHARE_PROXY_ENABLED=true
-export TRADING_MCP_AKSHARE_PROXY_AUTH_IP=10.0.0.8
-export TRADING_MCP_AKSHARE_PROXY_AUTH_TOKEN=
-export TRADING_MCP_AKSHARE_PROXY_RETRY=30
+export TRADING_MCP_AKSHARE_PROXY_AUTH_IP=***
+export TRADING_MCP_AKSHARE_PROXY_AUTH_TOKEN=*** TRADING_MCP_AKSHARE_PROXY_RETRY=30
 ```
 
 字段含义：
@@ -228,3 +227,70 @@ MCP_INSPECTOR_HOST=127.0.0.1 ./dev.sh
   "end_date": null
 }
 ```
+
+---
+
+## MCP 数据交互流程（架构与时序图）
+
+下面用 Mermaid 绘制当前 MCP 的主要数据交互架构与时序图，帮助理解请求在系统内的流转路径。
+
+### 架构示意（Flowchart）
+
+```mermaid
+flowchart LR
+  Client[Client / User] -->|HTTP/Stream 请求| MCP[MCP Server]
+  MCP -->|调用工具接口| API[Tool Dispatcher / Handlers]
+  API --> Market[MarketDataClient (Akshare / Providers)]
+  Market -->|行情数据| Storage[Local Cache / Data Dir]
+  API --> Indicator[IndicatorEngine (TA-Lib)]
+  Indicator -->|指标结果| Formatter[Response Formatter (Markdown / JSON)]
+  Formatter -->|返回| Client
+  Market -.->|必要时| Proxy[akshare-proxy-patch]
+  MCP -->|注册 & 管理| Inspector[MCP Inspector]
+```
+
+说明：
+- MCP Server：接收外部请求（HTTP/stream），负责解析请求并调用内部工具。
+- Tool Dispatcher：把请求路由到具体工具（如 trading_kline、trading_macd）。
+- MarketDataClient：统一市场数据接入层，目前以 Akshare 为主实现，支持代理 patch。
+- IndicatorEngine：调用 TA-Lib 或内置算法计算技术指标。
+- Response Formatter：把结构化数据转换为 Markdown 或 JSON 的 MCP 响应格式。
+- Local Cache/Storage：用于短期缓存和历史数据存储以减少 API 调用。
+
+### 时序图（Sequence Diagram）
+
+```mermaid
+sequenceDiagram
+  participant U as Client/User
+  participant M as MCP Server
+  participant D as Tool Dispatcher
+  participant MD as MarketDataClient
+  participant I as IndicatorEngine
+  participant F as Formatter
+
+  U->>M: 发起 trading_macd 请求 (symbol, start, end, params)
+  M->>D: 解析并转发请求
+  D->>MD: 请求历史 K 线 (symbol, start, end)
+  MD-->>D: 返回原始行情数据 (OHLCV)
+  D->>I: 传入行情数据与参数, 调用指标计算
+  I-->>D: 返回指标结果 (MACD lines, histogram)
+  D->>F: 格式化为 Markdown / JSON 的 MCP 响应
+  F-->>M: 返回格式化结果
+  M-->>U: 通过 HTTP Stream 返回响应 (chunked / 完整)
+
+  alt 缓存命中
+    D->>Storage: 读取缓存
+    Storage-->>D: 返回缓存数据
+  end
+
+  alt 第三方被阻断/需要代理
+    MD->>Proxy: 走 akshare-proxy-patch
+    Proxy-->>MD: 返回代理后的数据
+  end
+```
+
+以上两张图为当前系统的抽象视图；如果你希望把图细化为更多组件（例如：认证、限流、队列、异步任务、监控指标），告诉我需要增加哪些部分，我可以把 Mermaid 图扩展并更新到 README。
+
+---
+
+如果你确认这个更新没问题，我会把改动提交到一个新分支并推送，然后为你创建一个 Pull Request 供 review。
